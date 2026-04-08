@@ -181,6 +181,14 @@ The core logic resides in `src/lib.rs`.
    ```
    *Our test suite covers: Buyout logic validation, Bid price protection, and Ownership transfer security.*
 
+4. **Deploy (Testnet)**:
+   ```bash
+   stellar contract deploy \
+     --wasm target/wasm32-unknown-unknown/release/scout_grid.wasm \
+     --source <YOUR_ACCOUNT> \
+     --network testnet
+   ```
+
 ---
 
 ## 💻 Frontend Local Setup
@@ -203,7 +211,28 @@ The core logic resides in `src/lib.rs`.
    npm run dev
    ```
 
+--- 
+
+### 🧪 Smart Contract Security & Engineering (Test Snapshots)
+The ScoutGrid core logic is backed by a suite of automated Soroban tests. We utilize ledger snapshots (JSON) to verify state transitions, ensuring funds and royalties are never at risk.
+
+| Snapshot File | Validation Targeted | Strategic Proof |
+| :--- | :--- | :--- |
+| `test_1...first_sale.json` | **Happy Path** | Verifies player registration, bid escrow, and atomic ownership transfer. |
+| `test_2...royalty.json` | **Royalty Engine** | Proves that 10% of secondary sales are automatically routed to the original creator. |
+| `test_3...rejected.json` | **Price Protection**| Ensures bids at/above list price are rejected to prevent escrow bloat. |
+| `test_4...new_bid.json` | **Atomic Refunds** | Verifies that previous bidders are instantly refunded when outbid. |
+| `test_5...register.json` | **Auth Security** | Confirms that unauthorized accounts are blocked from registry mutation. |
+
 ---
+
+### 🚀 Deployment (Testnet)
+Once your local tests pass, deploy the finalized WASM to the Stellar Testnet.
+```bash
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/scout_grid.wasm \
+  --source <YOUR_ACCOUNT> \
+  --network testnet
 
 ## 🛠️ Sample CLI Invocations
 Test the grid directly from your terminal using the **Stellar CLI**.
@@ -259,27 +288,7 @@ Test the grid directly from your terminal using the **Stellar CLI**.
      --player GCF4N2Z...
    ```
 
-### 🚀 Deployment (Testnet)
-Once your local tests pass, deploy the finalized WASM to the Stellar Testnet.
-```bash
-stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/scout_grid.wasm \
-  --source <YOUR_ACCOUNT> \
-  --network testnet
 ```
-
-### 🧪 Smart Contract Security & Engineering (Test Snapshots)
-The ScoutGrid core logic is backed by a suite of automated Soroban tests. We utilize ledger snapshots (JSON) to verify state transitions, ensuring funds and royalties are never at risk.
-
-| Snapshot File | Validation Targeted | Strategic Proof |
-| :--- | :--- | :--- |
-| `test_1...first_sale.json` | **Happy Path** | Verifies player registration, bid escrow, and atomic ownership transfer. |
-| `test_2...royalty.json` | **Royalty Engine** | Proves that 10% of secondary sales are automatically routed to the original creator. |
-| `test_3...rejected.json` | **Price Protection**| Ensures bids at/above list price are rejected to prevent escrow bloat. |
-| `test_4...new_bid.json` | **Atomic Refunds** | Verifies that previous bidders are instantly refunded when outbid. |
-| `test_5...register.json` | **Auth Security** | Confirms that unauthorized accounts are blocked from registry mutation. |
-
----
 
 ## 🚀 Live Interface Walkthrough
 
