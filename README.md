@@ -233,6 +233,9 @@ stellar contract deploy \
   --wasm target/wasm32-unknown-unknown/release/scout_grid.wasm \
   --source <YOUR_ACCOUNT> \
   --network testnet
+```
+
+---
 
 ## 🛠️ Sample CLI Invocations
 Test the grid directly from your terminal using the **Stellar CLI**.
@@ -288,7 +291,7 @@ Test the grid directly from your terminal using the **Stellar CLI**.
      --player GCF4N2Z...
    ```
 
-```
+---
 
 ## 🚀 Live Interface Walkthrough
 
