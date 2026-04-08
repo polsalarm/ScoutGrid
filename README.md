@@ -370,3 +370,6 @@ Interrogate our high-performance AI advisor to uncover market trends and find un
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 *Built for the **Stellar Global Hackathon.** Let's build the future of pro-talent on the grid.* ⚡
+
+***Defying expectations. Dominating the grid.*** 🛰️
+Built with passion by **polsalarm** 🚀
