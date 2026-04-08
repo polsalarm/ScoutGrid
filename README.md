@@ -117,7 +117,7 @@ Stellar Testnet
 
 ### 🌐 On-Chain Explorer Verification
 All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
-![StellarExpert Explorer](./frontend/ui_images/Verify-%20Transaction.png)
+![StellarExpert Explorer](./frontend/ui_images/StellarExpert.png)
 
 ---
 
@@ -251,22 +251,34 @@ Every scout's journey begins with secure identity management via **SEP-10** and 
 A real-time, high-performance view of the global pro-gaming contract registry.
 ![Marketplace](./frontend/ui_images/Marketplace.png)
 
-### 🏹 Strategic Minting & Bidding
-Agencies can mint pro-profiles directly to the ledger, and scouts can place atomic escrowed bids.
-| Action | Interface | Blockchain Confirmation |
-| :--- | :---: | :---: |
-| **Minting** | ![Mint Profile](./frontend/ui_images/MintProfile.png) | ![Mint TX](./frontend/ui_images/MintProfile_Transaction.png) |
-| **Bidding** | ![Place Bid](./frontend/ui_images/PlaceBid.png) | ![Bid TX](./frontend/ui_images/PlaceBid_Transaction.png) |
+### 🏹 Strategic Minting
+Agencies can mint high-fidelity pro-profiles directly to the ledger with detailed stats and role definitions.
+| Minting Terminal | Blockchain Confirmation |
+| :---: | :---: |
+| ![Mint Profile](./frontend/ui_images/MintProfile.png) | ![Mint TX](./frontend/ui_images/MintProfile_Transaction.png) |
+
+### ⚡ Instant Buyout Lifecycle
+Buyouts are resolved with immediate finality on the Stellar ledger. Funds are escrowed and ownership is transferred atomically.
+| Initial Listing | Buyer Perspective | Terminal Confirmation |
+| :---: | :---: | :---: |
+| ![Buyout Before](./frontend/ui_images/BuyoutBefore.png) | ![Buyer Perspective](./frontend/ui_images/BuyoutBuyerPerspective.png) | ![Buyout TX](./frontend/ui_images/BuyoutTransactionn.png) |
+
+### 📂 Personal Roster & Escrow Management
+Monitor your secured contracts and manage active bidding wars. The roster allows owners to accept bids and finalize ownership transfers.
+| 1. Peer Bidding | 2. Seller Acceptance | 3. Finalized Transfer |
+| :---: | :---: | :---: |
+| ![Initial Bidding](./frontend/ui_images/InitialBidding.png) | ![Accept Bidding](./frontend/ui_images/AcceptBidding.png) | ![Transfer TX](./frontend/ui_images/AcceptBidding_Transaction.png) |
+
+### 🏆 Verified Achievements
+ScoutGrid tracks on-chain verified milestones, ensuring every player's professional history is tamper-proof.
+![Achievements](./frontend/ui_images/MyAchievement.png)
 
 ### 🛰️ Nova Intelligence Command Center
 Interrogate our high-performance AI advisor to uncover market trends and find undervalued talent.
-![Nova Chatbot](./frontend/ui_images/Nova_chatbot.png)
 
-### 📂 Personal Roster & Achievements
-Manage your secured contracts and track your players' on-chain verified milestones.
-| Secured Roster | Performance Achievement |
-| :---: | :---: |
-| ![My Roster](./frontend/ui_images/MyRoster_before.png) | ![Achievements](./frontend/ui_images/MyAchievement.png) |
+| 🛰️ UI Overview | 🔍 Scanning | 📡 Strategic Dossier ALPHA | 📡 Strategic Dossier BETA |
+| :---: | :---: | :---: | :---: |
+| ![Nova Chatbot](./frontend/ui_images/Nova_chatbot.png) | ![Scanning](./frontend/ui_images/ChatbotScanning.png) | ![Output 1](./frontend/ui_images/ChatbotOutput1.png) | ![Output 2](./frontend/ui_images/ChatbotOutput2.png) |
 
 ---
 

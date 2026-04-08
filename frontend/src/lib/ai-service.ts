@@ -23,7 +23,7 @@ GUIDELINES:
 
 export async function askNova(query: string, marketState: Player[]): Promise<string> {
     try {
-        const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
 
         // Build the context string
         const marketSummary = marketState.map(p => ({
