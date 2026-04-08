@@ -374,10 +374,10 @@ export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): P
     const players = itemsVec.map(itemSc => {
       // Use scValToNative for easier parsing of the MarketItem struct
       const item = StellarSdk.scValToNative(itemSc);
-      
+
       const playerAddr = item.player.toString();
       const profile = item.profile;
-      
+
       const highestBidXlm = stroopsToXlm(item.current_bid);
       const currentBidder = item.current_bidder ? item.current_bidder.toString() : null;
 
@@ -410,21 +410,21 @@ export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): P
  * Helper for read-only simulations 
  */
 async function simulateInvoke(method: string, args: StellarSdk.xdr.ScVal[]): Promise<any> {
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-    const dummyAccount = new StellarSdk.Account(ADMIN_ADDRESS, '0');
-    
-    const tx = new StellarSdk.TransactionBuilder(dummyAccount, {
-        fee: '100',
-        networkPassphrase: NETWORK_PASSPHRASE,
-    })
+  const server = getServer();
+  const contract = new StellarSdk.Contract(CONTRACT_ID);
+  const dummyAccount = new StellarSdk.Account(ADMIN_ADDRESS, '0');
+
+  const tx = new StellarSdk.TransactionBuilder(dummyAccount, {
+    fee: '100',
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
     .addOperation(contract.call(method, ...args))
     .setTimeout(10)
     .build();
 
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
-    return sim.result.retval;
+  const sim = await server.simulateTransaction(tx);
+  if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
+  return sim.result.retval;
 }
 
 /**
@@ -445,11 +445,11 @@ export async function syncFullRegistry(
       if (!raw) return [];
       const native = StellarSdk.scValToNative(raw);
       if (!Array.isArray(native)) return [];
-      
+
       return native.map((item: any) => {
         const profile = item.profile;
         const playerAddr = item.player.toString();
-        
+
         // Find local mock data to keep rich stats (KDA, matches, etc.)
         const localTemplate = INITIAL_PLAYERS.find((p: Player) => p.address === playerAddr);
 
@@ -480,19 +480,19 @@ export async function syncFullRegistry(
 
     // Merge: Store identity is unique per Address
     const registryMap = new Map<string, Player>();
-    
+
     // Fill with Personal Assets first (True ownership)
     oPlayers.forEach(p => registryMap.set(p.address, p));
-    
+
     // Layer with Market Data (Market data might have updated bid info)
     mPlayers.forEach(p => {
-        const existing = registryMap.get(p.address);
-        if (existing) {
-            // Merge properties, keeping ownership from Personal for consistency
-            registryMap.set(p.address, { ...existing, ...p });
-        } else {
-            registryMap.set(p.address, p);
-        }
+      const existing = registryMap.get(p.address);
+      if (existing) {
+        // Merge properties, keeping ownership from Personal for consistency
+        registryMap.set(p.address, { ...existing, ...p });
+      } else {
+        registryMap.set(p.address, p);
+      }
     });
 
     const finalPlayers = Array.from(registryMap.values());

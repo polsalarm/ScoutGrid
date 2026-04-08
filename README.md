@@ -19,6 +19,7 @@ ScoutGrid leverages the **Stellar (Soroban)** blockchain to create a high-perfor
 - **Royalty Enforcement**: Contract transfers include automated royalty logic (e.g., 10% to the original scout/agency) enforced at the protocol level.
 - **AI-Advisor (Nova)**: A Gemini-powered intelligence layer that scans the live blockchain registry to give scouts real-time tactical advice.
 
+
 ---
 
 ## 🚀 Core Functions & Features
@@ -93,24 +94,62 @@ Stellar Testnet
 
 ---
 
-## 📜 Smart Contract Interface
-ScoutGrid exposes a comprehensive set of **15 exported functions**, providing a robust API for talent management and marketplace interaction:
+## 🏗️ Stellar Features Used
 
-- `accept_bid`: Finalizes a contract transfer to the highest bidder.
-- `add_win_point`: Verified increment of a player's Win Point (WP) reputation.
-- `buyout`: Instant purchase of a contract at the listed price.
-- `get_all_market_items`: Retrieves the full public marketplace registry.
-- `get_all_player_addresses`: Utility to scan every profile on the grid.
-- `get_current_bid`: Real-time fetch of the top offer for a specific asset.
-- `get_owned_assets`: Retrieves personal dossiers for owners (including unlisted items).
-- `get_profile`: Detailed fetch of a player's on-chain stats and metadata.
-- `get_username`: Resolve account addresses to scout identifiers.
-- `init`: Bootstraps the grid with administrative roles and tokens.
-- `mint_player_profile`: Deploys a new pro-talent profile to the blockchain.
-- `place_bid`: Escrows a purchase offer for a pro-contract.
-- `register_player`: Initializes the data structure for a talent profile.
-- `register_user`: Onboards a new scout to the ScoutGrid ecosystem.
-- `set_admin`: Secure role management for grid maintenance.
+| Feature | Usage |
+| :--- | :--- |
+| **Soroban Smart Contracts** | Atomic marketplace logic — lock, release, bid processing, and royalty enforcement. |
+| **Native Assets / USDC** | Trustless settlement using Stellar assets, ensuring zero payment risk. |
+| **Trustlines** | KYC/Gating logic — ensures only verified agencies can receive high-value contract funds. |
+| **Clawback** | Security feature enabling the admin to reverse funds during a verified dispute grace period. |
+| **SEP-24** | (Roadmap) Interactive fiat-to-XLM on-ramp via local anchors. |
+| **SEP-10** | Wallet-based authentication for secure scout identity management. |
+
+---
+
+## 📍 Deployment & Contract Addresses
+
+| Layer | Environment | Address |
+| :--- | :--- | :--- |
+| **Marketplace Contract** | Stellar Testnet | `CBJKAS62XBI54L4BTMLUVTWZGBJJMM23GYMN2UPZHATY4WOIPVYV74U6` |
+| **Admin/Factory Account** | Stellar Testnet | `GCF4N2ZDIGVYGSXUT7XCUBR3WHPT2FYTIADXUODQZ57MOWX6USIEW2CY` |
+| **Native Asset (XLM)** | Stellar Testnet | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+### 🌐 On-Chain Explorer Verification
+All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
+![StellarExpert Explorer](./frontend/ui_images/Verify-%20Transaction.png)
+
+---
+
+## 📜 Smart Contract Interface
+ScoutGrid provides a robust set of **15 on-chain functions** categorized into Marketplace logic, Intelligence queries, and Governance.
+
+### 🏹 Marketplace Core
+| Function | Caller | Description |
+| :--- | :--- | :--- |
+| `mint_player_profile` | **Admin/Agency** | Deploys a new pro-talent profile to the blockchain. |
+| `place_bid` | **Scout** | Escrows a purchase offer for a pro-contract. |
+| `accept_bid` | **Owner/Player** | Finalizes the contract transfer to the highest bidder. |
+| `buyout` | **Scout** | Instant purchase of a contract at the listed price. |
+| `register_player` | **Agency/Player** | Initializes the data structure for a talent profile. |
+| `register_user` | **Anyone** | Onboards a new scout to the ScoutGrid ecosystem. |
+
+### 📡 Intelligence & Queries
+| Function | Caller | Description |
+| :--- | :--- | :--- |
+| `get_profile` | **Anyone** | Detailed fetch of a player's on-chain stats and metadata. |
+| `get_owned_assets` | **Owner** | Retrieves personal dossiers (including unlisted items). |
+| `get_all_market_items`| **Anyone** | Retrieves the full public marketplace registry. |
+| `get_all_player_addresses` | **Anyone** | Utility to scan every active profile on the grid. |
+| `get_current_bid` | **Anyone** | Real-time fetch of the top offer for a specific asset. |
+| `get_username` | **Anyone** | Resolve account addresses to scout identifiers. |
+
+### ⚖️ Governance & Admin
+| Function | Caller | Description |
+| :--- | :--- | :--- |
+| `add_win_point` | **Admin** | Verified increment of a player's Win Point (WP) reputation. |
+| `init` | **Deployer** | Bootstraps the grid with administrative roles and tokens. |
+| `set_admin` | **Admin** | Secure role management for grid maintenance. |
 
 ---
 
@@ -174,13 +213,68 @@ The core logic resides in `src/lib.rs`.
 
 ---
 
-## 📍 Deployment & Contract Addresses
+## 🛠️ Sample CLI Invocations
+Test the grid directly from your terminal using the **Stellar CLI**.
 
-| Layer | Environment | Address |
-| :--- | :--- | :--- |
-| **Marketplace Contract** | Stellar Testnet | `CBJKAS62XBI54L4BTMLUVTWZGBJJMM23GYMN2UPZHATY4WOIPVYV74U6` |
-| **Admin/Factory Account** | Stellar Testnet | `GCF4N2ZDIGVYGSXUT7XCUBR3WHPT2FYTIADXUODQZ57MOWX6USIEW2CY` |
-| **Native Asset (XLM)** | Stellar Testnet | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+1. **Mint a New Profile**:
+   ```bash
+   stellar contract invoke --id $CID --source scout_key --network testnet -- mint_player_profile --player GCF4N2Z... --role "Midlane" --list_price 5000
+   ```
+2. **Place a Bargain Bid**:
+   ```bash
+   stellar contract invoke --id $CID --source bidder_key --network testnet -- place_bid --bidder GABC123... --player GCF4N2Z... --amount 3000
+   ```
+3. **Accept the Top Bid**:
+   ```bash
+   stellar contract invoke --id $CID --source player_key --network testnet -- accept_bid --player GCF4N2Z...
+   ```
+4. **Instant Buyout**:
+   ```bash
+   stellar contract invoke --id $CID --source buyer_key --network testnet -- buyout --buyer GDEF456... --player GCF4N2Z...
+   ```
+5. **Check Intelligence Scan**:
+   ```bash
+   stellar contract invoke --id $CID --source anyone --network testnet -- get_profile --player GCF4N2Z...
+   ```
+
+---
+
+## 🚀 Live Interface Walkthrough
+
+### 🛡️ Identity & Onboarding
+Every scout's journey begins with secure identity management via **SEP-10** and the **Freighter Wallet**.
+| 1. Connect & Verify | 2. On-Chain Registration |
+| :---: | :---: |
+| ![Verify Identity](./frontend/ui_images/VerifyIdentity.png) | ![Verify Transaction](./frontend/ui_images/Verify-%20Transaction.png) |
+
+### 🌐 The Talent Grid (Marketplace)
+A real-time, high-performance view of the global pro-gaming contract registry.
+![Marketplace](./frontend/ui_images/Marketplace.png)
+
+### 🏹 Strategic Minting & Bidding
+Agencies can mint pro-profiles directly to the ledger, and scouts can place atomic escrowed bids.
+| Action | Interface | Blockchain Confirmation |
+| :--- | :---: | :---: |
+| **Minting** | ![Mint Profile](./frontend/ui_images/MintProfile.png) | ![Mint TX](./frontend/ui_images/MintProfile_Transaction.png) |
+| **Bidding** | ![Place Bid](./frontend/ui_images/PlaceBid.png) | ![Bid TX](./frontend/ui_images/PlaceBid_Transaction.png) |
+
+### 🛰️ Nova Intelligence Command Center
+Interrogate our high-performance AI advisor to uncover market trends and find undervalued talent.
+![Nova Chatbot](./frontend/ui_images/Nova_chatbot.png)
+
+### 📂 Personal Roster & Achievements
+Manage your secured contracts and track your players' on-chain verified milestones.
+| Secured Roster | Performance Achievement |
+| :---: | :---: |
+| ![My Roster](./frontend/ui_images/MyRoster_before.png) | ![Achievements](./frontend/ui_images/MyAchievement.png) |
+
+---
+
+## 👥 Target Users
+- **Esports Agencies**: To manage and monetize their rosters with protocol-enforced royalties.
+- **Pro Scouts**: To find undervalued talent using on-chain performance data and AI analysis.
+- **Professional Players**: To gain ownership of their performance history and ensure instant contract payments.
+
 
 ---
 
@@ -197,5 +291,16 @@ The core logic resides in `src/lib.rs`.
 - **[ ] Mobile Dossier**: A lightweight mobile app for scouts on-the-go.
 
 ---
+
+## 💎 Why Stellar?
+- **Fractional Fees**: Micro-bidding and royalty payouts remain profitable due to Stellar's low-cent transaction costs.
+- **Immediate Finality**: Contracts are secured in seconds, critical for high-stakes talent transfer windows.
+- **Protocol-Native Assets**: Built-in support for SEP-compliant assets allows for instant integration with stablecoins like USDC.
+- **Safe Smart Contracts**: Soroban's Rust-based architecture prevents common EVM vulnerabilities, ensuring talent funds are secure.
+
+---
+
+## ⚖️ License
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 *Built for the **Stellar Global Hackathon.** Let's build the future of pro-talent on the grid.* ⚡
