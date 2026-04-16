@@ -9,8 +9,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 soroban-sdk = "25.2.0"
 
+[build]
+target = "wasm32v1-none"
+
 [dev-dependencies]
 soroban-sdk = { version = "25.2.0", features = ["testutils"] }
+
 
 [profile.release]
 opt-level = "z"
