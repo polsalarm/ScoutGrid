@@ -92,6 +92,23 @@ Stellar Testnet
 - **AI Layer**: Google Gemini 1.5 Flash for market analysis and natural language queries.
 - **State Management**: Zustand for high-performance, real-time marketplace syncing.
 
+### 🔒 Security, Error Handling & Transactions
+ScoutGrid implements rigorous on-chain architecture alongside high-fidelity UI tracking to ensure absolute transparency during every operation.
+
+**On-Chain Error Handling (Soroban):**
+The underlying Rust smart contract natively catches, handles, and reverts **9 distinct error states** (`ContractError` enum), including:
+- `AlreadyInitialized` & `NotInitialized`: Protects administrator and registry core configuration.
+- `Unauthorized`: Prevents unauthorized actors from transferring contracts or spoofing identities.
+- `BidTooLow` & `InvalidAmount`: Ensures escrow pricing mechanics are strictly enforced.
+- `NotRegistered` & `UserAlreadyRegistered`: Maintains pristine player registration states.
+- `NoActiveBid` & `ProfileAlreadyExists`: Prevents duplicate database entries and dead-end executions.
+
+**Real-Time Transaction Status (Frontend):**
+On the client side, every single interaction (Bidding, Minting, Buyouts, Registration) is channeled through our custom Universal Sync Engine, keeping scouts fully informed of execution progress:
+- Every action triggers live state tracking steps visually (e.g., `"Simulating on Soroban..."`, `"Initiating Buyout..."`, `"Claiming Handle..."`).
+- The engine actively polls the Soroban RPC `getTransaction` status locally, resolving only upon on-chain finality.
+- Successful transactions return instantaneous positive confirmation (`"Confirmed! Grid updated."`) and instantly refresh the global grid state. Freighter signing rejections or simulation failures are elegantly caught and presented to the user via modal error alerts.
+
 ---
 
 ## 🏗️ Stellar Features Used
@@ -368,3 +385,4 @@ Interrogate our high-performance AI advisor to uncover market trends and find un
 
 ***Defying expectations. Dominating the grid.*** 🛰️
 Built with passion by **polsalarm** 🚀
+-
