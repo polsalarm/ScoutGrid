@@ -35,9 +35,13 @@ ScoutGrid leverages the **Stellar (Soroban)** blockchain to create a high-perfor
 
 ```text
 ScoutGrid/
-├── src/                        # 🦀 Smart Contract Source (Soroban)
-│   ├── lib.rs                  # Core Marketplace Logic & Functions
-│   └── test.rs                 # Security & Escrow Test Suite
+├── contract/                   # 🦀 Smart Contract Hub (Soroban)
+│   ├── src/                    # Rust Source Code
+│   │   ├── lib.rs              # Core Marketplace Logic & Functions
+│   │   └── test.rs             # Security & Escrow Test Suite
+│   ├── test_snapshots/         # Escrow State Assertions
+│   ├── Cargo.toml              # Rust Dependency Management
+│   └── README.md               # Contract Deployment & Setup Docs
 ├── frontend/                   # ⚛️ Web3 Interface (React/Vite)
 │   ├── src/
 │   │   ├── components/
@@ -55,7 +59,6 @@ ScoutGrid/
 │   │   │   ├── Marketplace.tsx # Public Talent Grid
 │   │   │   └── MyRoster.tsx    # Personal Secured Dossiers
 │   │   └── index.css           # Cyber-Neon Tailwind Styling
-├── Cargo.toml                  # Rust Dependency Management
 └── README.md                   # Professional Technical Dossier
 ```
 
