@@ -34,3 +34,7 @@ lerna-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+#claude agents
+.agents/
+.claude/

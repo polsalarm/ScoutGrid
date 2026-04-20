@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { Shield, X, Zap, Trophy, Plus, Trash2, Info } from 'lucide-react';
 import { mintPlayerProfile } from '../../lib/contract';
 import { useScoutStore } from '../../lib/store';
-import type { Player } from '../../lib/mock-data';
+import { showToast } from './Toast';
+import type { Player } from '../../lib/types';
 import { TOURNAMENTS, AWARDS, ROLES } from '../../lib/constants';
 
 interface MintModalProps {
@@ -18,8 +19,7 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
   const [bio, setBio] = useState('');
   const [listPrice, setListPrice] = useState('');
   const [isMinting, setIsMinting] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');
-  
+
   // Achievement Builder State
   const [selectedTournament, setSelectedTournament] = useState(TOURNAMENTS[0]);
   const [selectedAward, setSelectedAward] = useState(AWARDS[0]);
@@ -42,12 +42,7 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
     
     setIsMinting(true);
     try {
-      setStatusMsg('Preparing scout report...');
-      
-      // Real contract call
       await mintPlayerProfile(walletAddress!, role, bio, achievements, price);
-      
-      setStatusMsg('Profile minted on-chain!');
 
       const newPlayer = {
         id: Math.random().toString(36).substr(2, 9),
@@ -74,12 +69,13 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
       addPlayer(newPlayer);
       securePlayer(newPlayer);
       setIsMinted(true);
-
+      showToast('success', 'Profile Minted', `${username || 'Player'} is now live on the Market Grid.`);
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
-      setStatusMsg('Minting failed. Check console.');
+      const msg = err instanceof Error ? err.message : 'Minting failed. Check console.';
+      showToast('error', 'Mint Failed', msg);
     } finally {
       setIsMinting(false);
     }
@@ -215,11 +211,6 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
           </div>
 
           <div className="mt-8 flex flex-col items-center">
-            {statusMsg && (
-              <p className="text-electric text-xs font-mono mb-4 animate-pulse uppercase tracking-widest">
-                {statusMsg}
-              </p>
-            )}
             <button
               onClick={handleMint}
               disabled={isMinting || !bio || !listPrice}

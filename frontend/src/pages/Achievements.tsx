@@ -1,5 +1,5 @@
 import { ArrowLeft, Cpu, Trophy, Calendar, Star, Zap } from 'lucide-react';
-import type { Player } from '../lib/mock-data';
+import type { Player } from '../lib/types';
 
 interface AchievementsProps {
   player: Player;

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Target, Upload, Wallet, CheckCircle2 } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
-import { isConnected, requestAccess, getAddress, signMessage } from '@stellar/freighter-api';
+import { StellarWalletsKit } from '../../lib/walletKit';
 import { getProfile, getUsername } from '../../lib/contract';
 import { RegisterModal } from '../ui/RegisterModal';
 import { MintModal } from '../ui/MintModal';
+import { WalletModal } from '../ui/WalletModal';
+import { showToast } from '../ui/Toast';
 
 interface NavbarProps {
   page: 'marketplace' | 'roster' | 'achievements';
@@ -12,75 +14,65 @@ interface NavbarProps {
 }
 
 export function Navbar({ page, onNavigate }: NavbarProps) {
-  const { 
-    walletAddress, setWalletAddress, 
-    username, setUsername, 
-    isRegistered, setIsRegistered, 
-    isMinted, setIsMinted 
+  const {
+    walletAddress, setWalletAddress,
+    username, setUsername,
+    isRegistered, setIsRegistered,
+    isMinted, setIsMinted,
+    activeWalletId, setActiveWalletId,
+    isWalletModalOpen, setIsWalletModalOpen,
   } = useScoutStore();
-  
+
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isMintOpen, setIsMintOpen] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState('');
 
-  const connectWallet = async () => {
-    if (walletAddress) return;
-    try {
-      setIsChecking(true);
-      const connected = await isConnected();
-      if (!connected) {
-        setError('Freighter not detected.');
-        return;
+  const handleWalletSuccess = async (address: string) => {
+    setWalletAddress(address);
+    setActiveWalletId(StellarWalletsKit.selectedModule?.productId ?? null);
+    setError('');
+
+    // Check if the account is funded on testnet
+    const { isAccountFunded } = await import('../../lib/contract');
+    const funded = await isAccountFunded(address);
+    if (!funded) {
+      showToast(
+        'info',
+        'Account Not Funded',
+        `Fund this wallet via Stellar Friendbot before transacting. Visit: https://friendbot.stellar.org/?addr=${address}`,
+        8000
+      );
+    }
+
+    const existingIgn = await getUsername(address);
+    if (existingIgn) {
+      setUsername(existingIgn);
+      setIsRegistered(true);
+      const profile = await getProfile(address);
+      if (profile) setIsMinted(true);
+    } else {
+      if (funded) {
+        setIsRegisterOpen(true);
       }
-
-      const access = await requestAccess();
-      if (access.error) { setError(access.error); return; }
-
-      const message = `Verify ScoutGrid Connection: ${access.address.slice(0, 8)}...`;
-      const signed = await signMessage(message);
-      
-      if (signed.error) {
-        setError("Verification rejected.");
-        return;
-      }
-
-      setWalletAddress(access.address);
-      setError('');
-
-      // Check on-chain state
-      const existingIgn = await getUsername(access.address);
-      if (existingIgn) {
-        setUsername(existingIgn);
-        setIsRegistered(true);
-        const profile = await getProfile(access.address);
-        if (profile) setIsMinted(true);
-      } else {
-        setIsRegisterOpen(true); 
-      }
-    } catch (err) {
-      console.error(err);
-      setError('Failed to connect.');
-    } finally {
-      setIsChecking(false);
     }
   };
 
+  // Monitor for active wallet address changes (relevant for Freighter account switching)
   useEffect(() => {
-    const syncWallet = async () => {
+    if (!walletAddress || !activeWalletId) return;
+    const checkAddress = async () => {
       try {
-        const result = await getAddress();
-        const activeAddress = result.address;
-        if (walletAddress && activeAddress && activeAddress !== walletAddress) {
-          setWalletAddress(activeAddress);
+        const { address } = await StellarWalletsKit.getAddress();
+        if (address && address !== walletAddress) {
+          setWalletAddress(address);
           setIsRegistered(false);
           setIsMinted(false);
           setUsername(null);
         }
       } catch {}
     };
-    syncWallet();
-  }, [walletAddress, setWalletAddress, setIsRegistered, setIsMinted, setUsername]);
+    checkAddress();
+  }, [walletAddress, activeWalletId, setWalletAddress, setIsRegistered, setIsMinted, setUsername]);
 
   useEffect(() => {
     if (walletAddress && !isRegistered) {
@@ -132,9 +124,11 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
 
               {walletAddress ? (
                 <div className="flex items-center space-x-2">
-                  <div 
-                    onClick={() => { 
-                      setWalletAddress(null); setIsRegistered(false); setIsMinted(false); setUsername(null);
+                  <div
+                    onClick={() => {
+                      setWalletAddress(null); setIsRegistered(false); setIsMinted(false);
+                      setUsername(null); setActiveWalletId(null);
+                      showToast('info', 'Wallet Disconnected', 'Session cleared. Connect again to resume.');
                     }}
                     className="flex items-center space-x-2 border border-electric/30 bg-electric/5 px-3 py-1.5 font-mono text-xs text-electric cursor-pointer hover:bg-red-500/10 hover:border-red-500/50 transition-all group"
                   >
@@ -149,9 +143,12 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
                   )}
                 </div>
               ) : (
-                <button onClick={connectWallet} disabled={isChecking} className="flex items-center space-x-2 bg-electric text-slate-900 px-5 py-2 font-bold text-sm tracking-wide hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all disabled:opacity-60">
+                <button
+                  onClick={() => setIsWalletModalOpen(true)}
+                  className="flex items-center space-x-2 bg-electric text-slate-900 px-5 py-2 font-bold text-sm tracking-wide hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all"
+                >
                   <Wallet size={16} />
-                  <span>{isChecking ? 'Checking...' : 'Connect Wallet'}</span>
+                  <span>Connect Wallet</span>
                 </button>
               )}
             </div>
@@ -161,6 +158,12 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
 
       {error && <div className="bg-red-900/80 text-red-200 text-center text-xs py-1.5 font-mono">{error}</div>}
 
+      {isWalletModalOpen && (
+        <WalletModal
+          onClose={() => setIsWalletModalOpen(false)}
+          onSuccess={handleWalletSuccess}
+        />
+      )}
       {isRegisterOpen && (
         <RegisterModal
           onClose={() => setIsRegisterOpen(false)}

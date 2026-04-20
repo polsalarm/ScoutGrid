@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Trophy, ShoppingBag, Zap, CheckCircle2, Shield, RefreshCw, Cpu, Clock, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Trophy, ShoppingBag, Zap, Shield, RefreshCw, Cpu, Clock, ShieldCheck, ExternalLink } from 'lucide-react';
 import { useScoutStore } from '../lib/store';
 import { syncFullRegistry, acceptBid } from '../lib/contract';
-import type { Player } from '../lib/mock-data';
+import { showToast } from '../components/ui/Toast';
+import type { Player } from '../lib/types';
 
 function RosterCard({ player, walletAddress, isOffer }: { player: Player; walletAddress: string | null; isOffer?: boolean }) {
   const { setPlayers } = useScoutStore();
@@ -14,10 +15,11 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
     try {
       await acceptBid(walletAddress, player.address);
       await syncFullRegistry(walletAddress, setPlayers);
-      alert('Bid accepted! Player has been transferred.');
+      showToast('success', 'Bid Accepted', 'Player contract has been transferred.');
     } catch (err) {
       console.error(err);
-      alert('Failed to accept bid.');
+      const msg = err instanceof Error ? err.message : 'Failed to accept bid.';
+      showToast('error', 'Accept Failed', msg);
     } finally {
       setIsAccepting(false);
     }
@@ -97,7 +99,7 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
               {isOffer ? 'Your Offer' : 'Current Value'}
             </div>
             <div className="text-white text-lg font-bold font-mono">
-              {(isOffer ? player.highestBid : player.price || 0).toLocaleString()} <span className="text-xs text-slate-500">XLM</span>
+              {(isOffer ? (player.highestBid ?? 0) : player.price || 0).toLocaleString()} <span className="text-xs text-slate-500">XLM</span>
             </div>
           </div>
           {!isOffer && hasBid && (

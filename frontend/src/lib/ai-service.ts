@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { Player } from './mock-data';
+import type { Player } from './types';
 
 // User provided API Key for Gemini Free Tier
 const API_KEY = 'AIzaSyBfOYcXm1zti_LCRk96p_VoXH5b3fPF2pQ';

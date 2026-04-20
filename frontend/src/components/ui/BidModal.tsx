@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Zap, X, Clock, AlertCircle, Wallet, CheckCircle2 } from 'lucide-react';
-import { requestAccess, isConnected } from '@stellar/freighter-api';
 import { placeBid as contractPlaceBid, buyout as contractBuyout, syncGlobalMarket } from '../../lib/contract';
 import { useScoutStore } from '../../lib/store';
-import type { Player } from '../../lib/mock-data';
+import { showToast } from './Toast';
+import type { Player } from '../../lib/types';
 
 interface BidModalProps {
   player: Player;
@@ -13,35 +13,13 @@ interface BidModalProps {
 }
 
 export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
-  const { walletAddress, setWalletAddress, setPlayers } = useScoutStore();
+  const { walletAddress, setPlayers, setIsWalletModalOpen } = useScoutStore();
   const [bidAmount, setBidAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
-  const [statusMsg, setStatusMsg] = useState('');
-
-  const connectWallet = async () => {
-    setIsConnecting(true);
-    setError('');
-    try {
-      const connected = await isConnected();
-      if (!connected) {
-        setError('Freighter extension not detected. Please install it.');
-        return;
-      }
-      const access = await requestAccess();
-      if (access.error) { setError(access.error); return; }
-      setWalletAddress(access.address);
-    } catch {
-      setError('Failed to connect wallet.');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
 
   const handleSubmit = async () => {
     setError('');
-    setStatusMsg('');
     const num = parseInt(bidAmount);
     if (!num || num <= 0) {
       setError('Enter a valid XLM amount.');
@@ -54,19 +32,16 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
 
     setIsSubmitting(true);
     try {
-      setStatusMsg('Simulating on Soroban...');
-      // Real contract call — triggers Freighter popup
       await contractPlaceBid(walletAddress!, player.address, num);
-      await syncGlobalMarket(setPlayers); // Refetch fresh on-chain data
-
-      setStatusMsg('Confirmed! Grid updated.');
+      await syncGlobalMarket(setPlayers);
+      showToast('success', 'Bid Placed', `${num} XLM bid on ${player.name} confirmed.`);
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Transaction failed or was rejected.';
       setError(msg);
-      setStatusMsg('');
+      showToast('error', 'Bid Failed', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,23 +50,19 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
   const handleBuyout = async () => {
     if (!walletAddress) return;
     setError('');
-    setStatusMsg('');
     setIsSubmitting(true);
 
     try {
-      setStatusMsg('Initiating Buyout on Soroban...');
-      // 1. Contract Call
       await contractBuyout(walletAddress, player.address);
-      await syncGlobalMarket(setPlayers); // Refetch fresh state
-
-      setStatusMsg('Purchase confirmed! Updating Global Grid...');
+      await syncGlobalMarket(setPlayers);
+      showToast('success', 'Buyout Confirmed', `${player.name} added to your roster.`);
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Buyout failed or was rejected.';
       setError(msg);
-      setStatusMsg('');
+      showToast('error', 'Buyout Failed', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -174,23 +145,14 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
           {/* Connect wallet CTA (shown when not connected) */}
           {!walletAddress && (
             <button
-              onClick={connectWallet}
-              disabled={isConnecting}
-              className="w-full border border-pink-500/50 text-pink-400 hover:bg-pink-500/10 py-2.5 font-mono text-xs uppercase tracking-widest transition-colors disabled:opacity-50"
+              onClick={() => setIsWalletModalOpen(true)}
+              className="w-full border border-pink-500/50 text-pink-400 hover:bg-pink-500/10 py-2.5 font-mono text-xs uppercase tracking-widest transition-colors"
             >
               <span className="flex items-center justify-center space-x-2">
                 <Wallet size={12} />
-                <span>{isConnecting ? 'Connecting...' : 'Connect your Freighter wallet to bid'}</span>
+                <span>Connect wallet to bid</span>
               </span>
             </button>
-          )}
-
-          {/* Status / progress message */}
-          {statusMsg && !error && (
-            <div className="flex items-center space-x-2 text-electric font-mono text-[10px] border border-electric/20 bg-electric/5 px-3 py-2">
-              <span className="animate-pulse">◈</span>
-              <span>{statusMsg}</span>
-            </div>
           )}
 
           {/* Footer buttons */}
@@ -201,7 +163,7 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
                className="w-full bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 text-electric border border-electric/40 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:opacity-40 flex items-center justify-center space-x-2"
             >
                <CheckCircle2 size={14} />
-               <span>{isSubmitting ? (statusMsg || 'Processing...') : 'Instant Buyout'}</span>
+               <span>{isSubmitting ? 'Processing...' : 'Instant Buyout'}</span>
             </button>
 
             <div className="flex items-center space-x-3">

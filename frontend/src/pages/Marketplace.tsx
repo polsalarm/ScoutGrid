@@ -3,11 +3,11 @@ import { useScoutStore } from '../lib/store';
 import { PlayerCard } from '../components/ui/PlayerCard';
 import { Achievements } from './Achievements';
 import { syncFullRegistry } from '../lib/contract';
-import type { Player } from '../lib/mock-data';
+import type { Player } from '../lib/types';
 
 export function Marketplace() {
   const { players, setPlayers, walletAddress } = useScoutStore();
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [, setIsSyncing] = useState(false);
 
   // ─── Universal Sync ────────────────────────────────────────────────────────
   useEffect(() => {

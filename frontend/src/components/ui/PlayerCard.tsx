@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Trophy, Clock, Cpu, Zap, ShieldCheck } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
 import { buyout as contractBuyout, acceptBid as contractAcceptBid, syncGlobalMarket } from '../../lib/contract';
-import type { Player } from '../../lib/mock-data';
+import { showToast } from './Toast';
+import type { Player } from '../../lib/types';
 import { BidModal } from './BidModal';
 
 interface PlayerCardProps {
@@ -11,7 +12,7 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
-  const { walletAddress, securePlayer, setPlayers } = useScoutStore();
+  const { walletAddress, setPlayers } = useScoutStore();
   const [showBidModal, setShowBidModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [secured, setSecured] = useState(false);
@@ -20,17 +21,17 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
   const hasBid = player.highestBid && player.highestBid > 0;
 
   const handleBuyout = async () => {
-    if (!walletAddress) { alert('Connect Freighter first!'); return; }
+    if (!walletAddress) return;
     setIsProcessing(true);
     try {
-      console.log(`[Buyout] Initiating for ${player.name} (${player.address})`);
       await contractBuyout(walletAddress, player.address);
-      await syncGlobalMarket(setPlayers); // Refetch fresh state
+      await syncGlobalMarket(setPlayers);
       setSecured(true);
+      showToast('success', 'Buyout Confirmed', `${player.name} added to your roster.`);
     } catch (err) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Transaction failed or was rejected.';
-      alert(`Buyout failed: ${msg}`);
+      showToast('error', 'Buyout Failed', msg);
     } finally {
       setIsProcessing(false);
     }
@@ -40,13 +41,13 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
     if (!walletAddress) return;
     setIsProcessing(true);
     try {
-      console.log(`[Accept] Accepting bid for ${player.address}`);
       await contractAcceptBid(walletAddress, player.address);
-      await syncGlobalMarket(setPlayers); // Refetch fresh state
-      alert('Bid accepted! Contract ownership has been transferred.');
+      await syncGlobalMarket(setPlayers);
+      showToast('success', 'Bid Accepted', 'Contract ownership has been transferred.');
     } catch (err) {
       console.error(err);
-      alert('Failed to accept bid.');
+      const msg = err instanceof Error ? err.message : 'Failed to accept bid.';
+      showToast('error', 'Accept Failed', msg);
     } finally {
       setIsProcessing(false);
     }

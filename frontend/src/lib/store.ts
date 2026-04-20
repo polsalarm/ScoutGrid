@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Player } from './mock-data';
-import { INITIAL_PLAYERS } from './mock-data';
+import type { Player } from './types';
 
 interface ScoutState {
   walletAddress: string | null;
@@ -10,10 +9,14 @@ interface ScoutState {
   roster: Player[];
   isRegistered: boolean;
   isMinted: boolean;
+  activeWalletId: string | null;
+  isWalletModalOpen: boolean;
   setWalletAddress: (address: string | null) => void;
   setUsername: (name: string | null) => void;
   setIsRegistered: (status: boolean) => void;
   setIsMinted: (status: boolean) => void;
+  setActiveWalletId: (id: string | null) => void;
+  setIsWalletModalOpen: (open: boolean) => void;
   addPlayer: (player: Player) => void;
   unlistPlayer: (playerId: string) => void;
   transferOwnership: (playerId: string, newOwner: string) => void;
@@ -27,10 +30,14 @@ export const useScoutStore = create<ScoutState>()(
     (set) => ({
       walletAddress: null,
       username: null,
-      players: INITIAL_PLAYERS,
+      players: [],
       roster: [],
       isRegistered: false,
       isMinted: false,
+      activeWalletId: null,
+      isWalletModalOpen: false,
+      setActiveWalletId: (id) => set({ activeWalletId: id }),
+      setIsWalletModalOpen: (open) => set({ isWalletModalOpen: open }),
       setWalletAddress: (address) => set({ walletAddress: address }),
       setUsername: (name) => set({ username: name }),
       setIsRegistered: (status) => set({ isRegistered: status }),

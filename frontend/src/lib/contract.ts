@@ -5,12 +5,13 @@
  * Network:   Stellar Testnet
  * Admin:     GCF4N2ZDIGVYGSXUT7XCUBR3WHPT2FYTIADXUODQZ57MOWX6USIEW2CY
  *
- * stellar-sdk v13: SorobanRpc → rpc, scVal → nativeToScVal
+ * @stellar/stellar-sdk v15: Protocol 22 native, rpc.assembleTransaction, rpc.Api
  */
 
-import * as StellarSdk from 'stellar-sdk';
-import { signTransaction } from '@stellar/freighter-api';
-import { type Player, INITIAL_PLAYERS } from './mock-data';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { StellarWalletsKit } from './walletKit';
+import { showToast } from '../components/ui/Toast';
+import type { Player } from './types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const CONTRACT_ID = 'CBJKAS62XBI54L4BTMLUVTWZGBJJMM23GYMN2UPZHATY4WOIPVYV74U6';
@@ -37,7 +38,17 @@ function getServer() {
   return new StellarSdk.rpc.Server(RPC_URL, { allowHttp: false });
 }
 
-// ─── Helper: build → simulate → sign → submit → poll ─────────────────────────
+/** Check if a Stellar account exists (is funded) on the network */
+export async function isAccountFunded(address: string): Promise<boolean> {
+  try {
+    await getServer().getAccount(address);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Helper: build → simulate → assemble → sign → submit → poll ──────────────
 async function invokeContract(
   callerAddress: string,
   functionName: string,
@@ -55,65 +66,55 @@ async function invokeContract(
     .setTimeout(30)
     .build();
 
-  // Simulate to get resource footprint
-  console.log(`[Soroban] Simulating ${functionName}...`, { callerAddress, args });
-  const simResult = await server.simulateTransaction(tx);
-  if (StellarSdk.rpc.Api.isSimulationError(simResult)) {
+  // 1. Simulate
+  showToast('info', 'Simulating Transaction', `Preparing ${functionName}…`, 2500);
+  const simulation = await server.simulateTransaction(tx);
+  if (StellarSdk.rpc.Api.isSimulationError(simulation)) {
+    showToast('error', 'Simulation Failed', 'Contract may be uninitialized or the action is unauthorized.');
     throw new Error(`Simulation failed: The contract may be uninitialized or the action is unauthorized.`);
   }
-  console.log(`[Soroban] Simulation Result:`, simResult);
 
-  // Assemble with footprint
-  const preparedTx = StellarSdk.rpc.assembleTransaction(tx, simResult).build();
-  console.log(`[Soroban] Prepared Transaction XDR:`, preparedTx.toXDR());
+  // 2. Assemble with resource footprint
+  const preparedTx = StellarSdk.rpc.assembleTransaction(tx, simulation).build();
 
-  // Sign via Freighter v6 — throws on rejection instead of returning { error }
+  // 3. Sign via StellarWalletsKit
+  showToast('info', 'Approve in Wallet', 'Sign the transaction in your wallet to continue.', 12000);
   let signedXdr: string;
   try {
-    const signed = await signTransaction(preparedTx.toXDR(), {
+    const result = await StellarWalletsKit.signTransaction(preparedTx.toXDR(), {
       networkPassphrase: NETWORK_PASSPHRASE,
     });
-    signedXdr = signed.signedTxXdr;
+    signedXdr = result.signedTxXdr;
   } catch {
-    throw new Error('Transaction rejected in Freighter.');
+    showToast('error', 'Transaction Rejected', 'You cancelled or rejected the wallet signature.');
+    throw new Error('Transaction rejected in wallet.');
   }
 
-  // ⚠️ Bypass stellar-sdk XDR re-parsing (causes "Bad union switch" with Freighter v6).
-  // Submit the signed XDR directly via the Soroban JSON-RPC endpoint instead.
-  const sendRes = await fetch(RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0', id: 1,
-      method: 'sendTransaction',
-      params: { transaction: signedXdr },
-    }),
-  });
-  const sendJson = await sendRes.json();
-  if (sendJson.error) throw new Error(`RPC error: ${JSON.stringify(sendJson.error)}`);
+  // 4. Submit via RPC
+  const signedTx = StellarSdk.TransactionBuilder.fromXDR(
+    signedXdr,
+    NETWORK_PASSPHRASE
+  ) as StellarSdk.Transaction;
 
-  const { hash, status: sendStatus } = sendJson.result;
-  if (sendStatus === 'ERROR') {
-    throw new Error(`Network rejected transaction: ${JSON.stringify(sendJson.result)}`);
+  const sendResponse = await server.sendTransaction(signedTx);
+  if (sendResponse.status === 'ERROR') {
+    showToast('error', 'Submission Failed', 'Network rejected the transaction.');
+    throw new Error(`Network rejected transaction: ${JSON.stringify(sendResponse.errorResult)}`);
   }
 
-  // Poll getTransaction until SUCCESS or FAILED
+  showToast('info', 'Transaction Submitted', `Hash: ${sendResponse.hash.slice(0, 12)}…`, 4000);
+
+  // 5. Poll until SUCCESS or FAILED
   for (let i = 0; i < 20; i++) {
     await new Promise(r => setTimeout(r, 1500));
-    const pollRes = await fetch(RPC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 2,
-        method: 'getTransaction',
-        params: { hash },
-      }),
-    });
-    const pollJson = await pollRes.json();
-    const txStatus = pollJson.result?.status;
-    if (txStatus === 'SUCCESS') return;
-    if (txStatus === 'FAILED') throw new Error('Transaction failed on-chain.');
+    const pollResponse = await server.getTransaction(sendResponse.hash);
+    if (pollResponse.status === StellarSdk.rpc.Api.GetTransactionStatus.SUCCESS) return;
+    if (pollResponse.status === StellarSdk.rpc.Api.GetTransactionStatus.FAILED) {
+      showToast('error', 'Transaction Failed', 'The transaction was rejected on-chain.');
+      throw new Error('Transaction failed on-chain.');
+    }
   }
+  showToast('error', 'Transaction Timeout', 'No confirmation after 30 seconds. Check Stellar Explorer.');
   throw new Error('Transaction timed out waiting for confirmation.');
 }
 
@@ -224,39 +225,26 @@ export interface OnChainProfile {
 /** getProfile — read a player's on-chain profile (no signature needed) */
 export async function getProfile(playerAddress: string): Promise<OnChainProfile | null> {
   try {
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-
     // Hardening: Prevent crash if address is invalid/mock
     if (!playerAddress || !playerAddress.startsWith('G') || playerAddress.length !== 56) {
       console.warn(`[Soroban] Skipping getProfile for invalid address: ${playerAddress}`);
       return null;
     }
 
-    const dummy = new StellarSdk.Account(playerAddress, '0');
+    const retval = await simulateInvoke('get_profile', [addrVal(playerAddress)]);
+    if (!retval) return null;
 
-    const tx = new StellarSdk.TransactionBuilder(dummy, {
-      fee: '100',
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('get_profile', addrVal(playerAddress)))
-      .setTimeout(10)
-      .build();
-
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
-
-    const map = sim.result.retval.map();
+    const map = retval.map();
     if (!map) return null;
 
-    const find = (key: string) => map.find(e => {
+    const find = (key: string) => map.find((e: any) => {
       try { return e.key().sym().toString() === key; } catch { return false; }
     })?.val();
 
     const username = find('username')?.str()?.toString() ?? '';
     const role = find('role')?.str()?.toString() ?? '';
     const bio = find('bio')?.str()?.toString() ?? '';
-    const achievements = find('achievements')?.vec()?.map(v => v.str().toString()) ?? [];
+    const achievements = find('achievements')?.vec()?.map((v: any) => v.str().toString()) ?? [];
     const winPoints = find('win_points')?.u32() ?? 0;
     const owner = StellarSdk.Address.fromScVal(find('owner')!).toString();
     const originalCreator = StellarSdk.Address.fromScVal(find('original_creator')!).toString();
@@ -275,22 +263,9 @@ export async function getProfile(playerAddress: string): Promise<OnChainProfile 
 /** getUsername — read only registration IGN */
 export async function getUsername(userAddress: string): Promise<string | null> {
   try {
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-    const dummy = new StellarSdk.Account(userAddress, '0');
-
-    const tx = new StellarSdk.TransactionBuilder(dummy, {
-      fee: '100',
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('get_username', addrVal(userAddress)))
-      .setTimeout(10)
-      .build();
-
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
-
-    return sim.result.retval.str().toString();
+    const retval = await simulateInvoke('get_username', [addrVal(userAddress)]);
+    if (!retval) return null;
+    return retval.str().toString();
   } catch {
     return null;
   }
@@ -299,47 +274,22 @@ export async function getUsername(userAddress: string): Promise<string | null> {
 /** getCurrentBid — current standing bid amount for a player in XLM */
 export async function getCurrentBid(playerAddress: string): Promise<number> {
   try {
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-    const dummy = new StellarSdk.Account(playerAddress, '0');
-
-    const tx = new StellarSdk.TransactionBuilder(dummy, {
-      fee: '100',
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('get_current_bid', addrVal(playerAddress)))
-      .setTimeout(10)
-      .build();
-
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return 0;
-
-    const stroops = sim.result.retval.i128();
+    const retval = await simulateInvoke('get_current_bid', [addrVal(playerAddress)]);
+    if (!retval) return 0;
+    const stroops = retval.i128();
     return stroopsToXlm(parseI128(stroops));
   } catch (err) {
     console.warn(`[Soroban] Failed to get current bid for ${playerAddress}`, err);
     return 0;
   }
 }
+
 /** get_all_player_addresses — retrieve the global registry */
 export async function getAllPlayerAddresses(): Promise<string[]> {
   try {
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-    const dummy = new StellarSdk.Account(ADMIN_ADDRESS, '0');
-
-    const tx = new StellarSdk.TransactionBuilder(dummy, {
-      fee: '100',
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('get_all_player_addresses'))
-      .setTimeout(10)
-      .build();
-
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return [];
-
-    return sim.result.retval.vec()?.map(v => StellarSdk.Address.fromScVal(v).toString()) ?? [];
+    const retval = await simulateInvoke('get_all_player_addresses', []);
+    if (!retval) return [];
+    return retval.vec()?.map((v: any) => StellarSdk.Address.fromScVal(v).toString()) ?? [];
   } catch (err) {
     console.error('[Soroban] Failed to fetch player registry:', err);
     return [];
@@ -350,35 +300,20 @@ export async function getAllPlayerAddresses(): Promise<string[]> {
 export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): Promise<void> {
   try {
     console.log('[Sync] Starting Optimized Global Sync...');
-    const server = getServer();
-    const contract = new StellarSdk.Contract(CONTRACT_ID);
-    const dummy = new StellarSdk.Account(ADMIN_ADDRESS, '0');
-
-    const tx = new StellarSdk.TransactionBuilder(dummy, {
-      fee: '100',
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('get_all_market_items'))
-      .setTimeout(10)
-      .build();
-
-    const sim = await server.simulateTransaction(tx);
-    if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) {
+    const retval = await simulateInvoke('get_all_market_items', []);
+    if (!retval) {
       console.warn('[Sync] Registry is empty or simulation failed.');
       return;
     }
 
-    const itemsVec = sim.result.retval.vec();
-    if (!itemsVec) return;
+    const native = StellarSdk.scValToNative(retval);
+    if (!Array.isArray(native)) return;
 
-    const players = itemsVec.map(itemSc => {
-      // Use scValToNative for easier parsing of the MarketItem struct
-      const item = StellarSdk.scValToNative(itemSc);
-
+    const players = native.map((item: any) => {
       const playerAddr = item.player.toString();
       const profile = item.profile;
 
-      const highestBidXlm = stroopsToXlm(item.current_bid);
+      const highestBidXlm = typeof item.current_bid === 'bigint' ? stroopsToXlm(item.current_bid) : 0;
       const currentBidder = item.current_bidder ? item.current_bidder.toString() : null;
 
       return {
@@ -390,7 +325,7 @@ export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): P
         winPoints: Number(profile.win_points || 0),
         address: playerAddr,
         owner: profile.owner.toString(),
-        price: stroopsToXlm(profile.list_price),
+        price: typeof profile.list_price === 'bigint' ? stroopsToXlm(profile.list_price) : 0,
         highestBid: highestBidXlm,
         currentBidder,
         isListed: profile.listed,
@@ -406,9 +341,7 @@ export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): P
   }
 }
 
-/** 
- * Helper for read-only simulations 
- */
+/** Helper for read-only simulations — returns the return value ScVal or null. */
 async function simulateInvoke(method: string, args: StellarSdk.xdr.ScVal[]): Promise<any> {
   const server = getServer();
   const contract = new StellarSdk.Contract(CONTRACT_ID);
@@ -437,9 +370,16 @@ export async function syncFullRegistry(
 ) {
   try {
     // 1. Fetch Global Marketplace (Visible public items + Bids)
-    // 2. Fetch Owned Assets (Private Collection)
     const marketRaw = await simulateInvoke('get_all_market_items', []);
-    const ownedRaw = await simulateInvoke('get_owned_assets', [addrVal(walletAddress)]);
+
+    // 2. Fetch Owned Assets (only if account is funded on-chain)
+    let ownedRaw = null;
+    const funded = await isAccountFunded(walletAddress);
+    if (funded) {
+      ownedRaw = await simulateInvoke('get_owned_assets', [addrVal(walletAddress)]);
+    } else {
+      console.warn(`[Full Sync] Wallet ${walletAddress.slice(0, 8)}... is unfunded. Skipping owned-assets lookup.`);
+    }
 
     const parseItems = (raw: any): Player[] => {
       if (!raw) return [];
@@ -450,18 +390,14 @@ export async function syncFullRegistry(
         const profile = item.profile;
         const playerAddr = item.player.toString();
 
-        // Find local mock data to keep rich stats (KDA, matches, etc.)
-        const localTemplate = INITIAL_PLAYERS.find((p: Player) => p.address === playerAddr);
-
         const parseAmount = (val: any) => typeof val === 'bigint' ? stroopsToXlm(val) : 0;
 
         return {
-          ...localTemplate, // Spread local details (stats, bio, etc.) first
           id: playerAddr.slice(0, 10),
-          name: profile.username || (localTemplate?.name) || 'Scout',
-          role: profile.role || (localTemplate?.role) || 'N/A',
-          bio: profile.bio || (localTemplate?.bio) || '',
-          achievements: profile.achievements || (localTemplate?.achievements) || [],
+          name: profile.username || 'Scout',
+          role: profile.role || 'N/A',
+          bio: profile.bio || '',
+          achievements: profile.achievements || [],
           winPoints: Number(profile.win_points || 0),
           address: playerAddr,
           owner: profile.owner.toString(),
@@ -469,8 +405,8 @@ export async function syncFullRegistry(
           highestBid: parseAmount(item.current_bid),
           currentBidder: item.current_bidder ? item.current_bidder.toString() : null,
           isListed: profile.listed,
-          endTime: localTemplate?.endTime || '24:00',
-          stats: localTemplate?.stats || { kda: 'N/A', winRate: 'N/A', matches: 0, tournamentsWon: 0, mvpAwards: 0, avgGoldMin: 'N/A' }
+          endTime: '24:00',
+          stats: { kda: 'N/A', winRate: 'N/A', matches: 0, tournamentsWon: 0, mvpAwards: 0, avgGoldMin: 'N/A' }
         } as Player;
       });
     };
