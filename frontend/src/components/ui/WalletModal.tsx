@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Wallet, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { StellarWalletsKit, FREIGHTER_ID, ALBEDO_ID, XBULL_ID, HOTWALLET_ID } from '../../lib/walletKit';
+import { StellarWalletsKit, FREIGHTER_ID, ALBEDO_ID, XBULL_ID, LEDGER_ID } from '../../lib/walletKit';
 import { showToast } from './Toast';
 
 interface WalletModalProps {
@@ -35,12 +35,12 @@ const WALLETS = [
     bgColor: 'hover:bg-yellow-500/10',
   },
   {
-    id: HOTWALLET_ID,
-    name: 'HOT Wallet',
-    description: 'NEAR-connected multi-chain wallet',
-    borderColor: 'border-orange-500/50 hover:border-orange-400',
-    textColor: 'text-orange-400',
-    bgColor: 'hover:bg-orange-500/10',
+    id: LEDGER_ID,
+    name: 'Ledger',
+    description: 'Ledger hardware wallet',
+    borderColor: 'border-green-500/50 hover:border-green-400',
+    textColor: 'text-green-400',
+    bgColor: 'hover:bg-green-500/10',
   },
 ] as const;
 
