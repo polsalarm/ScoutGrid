@@ -1,3 +1,10 @@
+export interface LoanRecord {
+  borrower: string;
+  principal: number;   // in XLM
+  startLedger: number;
+  dueLedger: number;
+}
+
 export type Player = {
   id: string;
   name: string;

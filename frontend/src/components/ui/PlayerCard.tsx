@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Trophy, Clock, Cpu, Zap, ShieldCheck } from 'lucide-react';
+import { Trophy, Clock, Cpu, Zap, ShieldCheck, Landmark } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
 import { buyout as contractBuyout, acceptBid as contractAcceptBid, syncGlobalMarket } from '../../lib/contract';
 import { showToast } from './Toast';
 import type { Player } from '../../lib/types';
 import { BidModal } from './BidModal';
+import { LoanModal } from './LoanModal';
+import { LoanBadge } from './LoanBadge';
 
 interface PlayerCardProps {
   player: Player;
@@ -12,13 +14,15 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
-  const { walletAddress, setPlayers } = useScoutStore();
+  const { walletAddress, setPlayers, loans } = useScoutStore();
   const [showBidModal, setShowBidModal] = useState(false);
+  const [showLoanModal, setShowLoanModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [secured, setSecured] = useState(false);
 
   const isOwner = walletAddress === player.owner;
   const hasBid = player.highestBid && player.highestBid > 0;
+  const activeLoan = loans[player.address] ?? null;
 
   const handleBuyout = async () => {
     if (!walletAddress) return;
@@ -131,7 +135,9 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
         </div>
       ) : isOwner ? (
         <div className="flex flex-col space-y-2">
-          {hasBid ? (
+          {activeLoan ? (
+            <LoanBadge loan={activeLoan} />
+          ) : hasBid ? (
             <button
               onClick={handleAcceptBid}
               disabled={isProcessing}
@@ -143,6 +149,15 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
             <div className="text-center border border-slate-800 bg-slate-800/20 text-slate-500 font-mono text-[10px] py-3 uppercase tracking-widest">
               Awaiting Bids
             </div>
+          )}
+          {!activeLoan && (
+            <button
+              onClick={() => setShowLoanModal(true)}
+              className="w-full flex items-center justify-center space-x-1.5 border border-amber-500/40 bg-amber-500/5 text-amber-500 hover:bg-amber-500/15 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors"
+            >
+              <Landmark size={11} />
+              <span>Borrow Against</span>
+            </button>
           )}
         </div>
       ) : (
@@ -169,6 +184,13 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
           player={player}
           onClose={() => setShowBidModal(false)}
           onSuccess={() => setSecured(true)}
+        />
+      )}
+      {showLoanModal && (
+        <LoanModal
+          player={player}
+          onClose={() => setShowLoanModal(false)}
+          onSuccess={() => syncGlobalMarket(setPlayers)}
         />
       )}
     </div>

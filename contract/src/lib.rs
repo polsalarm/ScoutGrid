@@ -11,6 +11,8 @@ pub enum DataKey {
     CurrentBidder(Address),  // Maps a Player's Address to the current (best-offer) bidder
     CurrentBid(Address),     // Maps a Player's Address to the current bid amount
     PlayerRegistry,          // Vec<Address> containing all player addresses minted
+    LoanRecord(Address),     // Maps a Player's Address to their active LoanRecord
+    LoanPool,                // i128 — total XLM available in the lending pool
 }
 
 #[contracterror]
@@ -26,6 +28,12 @@ pub enum ContractError {
     UserAlreadyRegistered = 106,
     NotInitialized = 107,
     ProfileAlreadyExists = 108,
+    LoanAlreadyExists = 109,
+    NoActiveLoan = 110,
+    InsufficientPool = 111,
+    LoanNotExpired = 112,
+    CollateralNotOwned = 113,
+    ExceedsLTV = 114,
 }
 
 #[contracttype]
@@ -44,11 +52,33 @@ pub struct PlayerProfile {
 
 #[contracttype]
 #[derive(Clone, Debug)]
+pub struct LoanRecord {
+    pub borrower: Address,
+    pub principal: i128,
+    pub start_ledger: u32,
+    pub due_ledger: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug)]
 pub struct MarketItem {
     pub player: Address,
     pub profile: PlayerProfile,
     pub current_bid: i128,
     pub current_bidder: Option<Address>,
+}
+
+pub const LOAN_DURATION_LEDGERS: u32 = 518_400; // ~30 days at 5s/ledger
+pub const INTEREST_RATE_BPS: u32 = 500;         // 5% per term
+
+fn compute_max_ltv(win_points: u32) -> u32 {
+    match win_points {
+        0 => 50,
+        1..=2 => 55,
+        3..=5 => 65,
+        6..=9 => 72,
+        _ => 80,
+    }
 }
 
 #[contract]
@@ -177,19 +207,8 @@ impl ScoutGridMarket {
             .unwrap_or_else(|| panic_with_error!(&env, ContractError::NotRegistered));
 
         if amount >= profile.list_price {
-            // Mechanics: You bargain for a LOWER price than the buyout.
-            // If you want to pay list price, you should use a (future) buyout() function.
-            // For now, we enforce BARGAIN logic.
-            panic_with_error!(&env, ContractError::BidTooLow);
-        }
-
-        // Additional Check: Must be higher than existing bid
-        let current_bid: i128 = env.storage()
-            .persistent()
-            .get(&DataKey::CurrentBid(player.clone()))
-            .unwrap_or(0);
-        
-        if amount <= current_bid {
+            // Bargain mechanic: bids must be below list_price.
+            // Use buyout() to pay the full asking price instantly.
             panic_with_error!(&env, ContractError::BidTooLow);
         }
 
@@ -253,9 +272,10 @@ impl ScoutGridMarket {
             client.transfer(&env.current_contract_address(), &profile.owner, &seller_cut);
         }
 
-        // 4. Update ownership and UNLIST
+        // 4. Update ownership, reflect accepted price, and UNLIST
         profile.owner = current_bidder;
-        profile.listed = false; // Sold!
+        profile.list_price = current_bid;
+        profile.listed = false;
         env.storage().persistent().set(&DataKey::Profile(player.clone()), &profile);
 
         env.storage().persistent().set(&DataKey::CurrentBid(player.clone()), &0i128);
@@ -366,6 +386,125 @@ impl ScoutGridMarket {
             }
         }
         items
+    }
+
+    // ─── Loan Functions ───────────────────────────────────────────────────────
+
+    // Admin (or any sponsor) deposits XLM into the lending pool
+    pub fn fund_pool(env: Env, funder: Address, amount: i128) {
+        funder.require_auth();
+        if amount <= 0 {
+            panic_with_error!(&env, ContractError::InvalidAmount);
+        }
+        let token_addr: Address = env.storage().instance().get(&DataKey::MarketToken)
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::NotInitialized));
+        let client = token::Client::new(&env, &token_addr);
+        client.transfer(&funder, &env.current_contract_address(), &amount);
+        let pool: i128 = env.storage().persistent().get(&DataKey::LoanPool).unwrap_or(0);
+        env.storage().persistent().set(&DataKey::LoanPool, &(pool + amount));
+    }
+
+    // Owner locks their player contract as collateral and borrows XLM from the pool
+    pub fn take_loan(env: Env, borrower: Address, player: Address, amount: i128) {
+        borrower.require_auth();
+        if amount <= 0 {
+            panic_with_error!(&env, ContractError::InvalidAmount);
+        }
+        let mut profile: PlayerProfile = env.storage().persistent()
+            .get(&DataKey::Profile(player.clone()))
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::NotRegistered));
+        if profile.owner != borrower {
+            panic_with_error!(&env, ContractError::CollateralNotOwned);
+        }
+        if env.storage().persistent().has(&DataKey::LoanRecord(player.clone())) {
+            panic_with_error!(&env, ContractError::LoanAlreadyExists);
+        }
+        let ltv = compute_max_ltv(profile.win_points);
+        let max_borrow = profile.list_price * ltv as i128 / 100;
+        if amount > max_borrow {
+            panic_with_error!(&env, ContractError::ExceedsLTV);
+        }
+        let pool: i128 = env.storage().persistent().get(&DataKey::LoanPool).unwrap_or(0);
+        if amount > pool {
+            panic_with_error!(&env, ContractError::InsufficientPool);
+        }
+        let token_addr: Address = env.storage().instance().get(&DataKey::MarketToken).unwrap();
+        let client = token::Client::new(&env, &token_addr);
+        client.transfer(&env.current_contract_address(), &borrower, &amount);
+        let current_ledger = env.ledger().sequence();
+        let loan = LoanRecord {
+            borrower: borrower.clone(),
+            principal: amount,
+            start_ledger: current_ledger,
+            due_ledger: current_ledger + LOAN_DURATION_LEDGERS,
+        };
+        env.storage().persistent().set(&DataKey::LoanRecord(player.clone()), &loan);
+        env.storage().persistent().set(&DataKey::LoanPool, &(pool - amount));
+        // Lock the collateral — cannot be sold while pledged
+        profile.listed = false;
+        env.storage().persistent().set(&DataKey::Profile(player), &profile);
+    }
+
+    // Borrower repays principal + compound interest to unlock their player contract
+    pub fn repay_loan(env: Env, borrower: Address, player: Address) {
+        borrower.require_auth();
+        let loan: LoanRecord = env.storage().persistent()
+            .get(&DataKey::LoanRecord(player.clone()))
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::NoActiveLoan));
+        if loan.borrower != borrower {
+            panic_with_error!(&env, ContractError::Unauthorized);
+        }
+        let current_ledger = env.ledger().sequence();
+        let elapsed = current_ledger.saturating_sub(loan.start_ledger);
+        let terms = ((elapsed + LOAN_DURATION_LEDGERS - 1) / LOAN_DURATION_LEDGERS).max(1);
+        // Compound interest: apply INTEREST_RATE_BPS per term
+        let mut repayment = loan.principal;
+        for _ in 0..terms {
+            repayment = repayment + (repayment * INTEREST_RATE_BPS as i128 / 10_000);
+        }
+        let token_addr: Address = env.storage().instance().get(&DataKey::MarketToken).unwrap();
+        let client = token::Client::new(&env, &token_addr);
+        client.transfer(&borrower, &env.current_contract_address(), &repayment);
+        let pool: i128 = env.storage().persistent().get(&DataKey::LoanPool).unwrap_or(0);
+        env.storage().persistent().set(&DataKey::LoanPool, &(pool + repayment));
+        env.storage().persistent().remove(&DataKey::LoanRecord(player.clone()));
+        // Unlock the collateral — re-list on the market
+        let mut profile: PlayerProfile = env.storage().persistent()
+            .get(&DataKey::Profile(player.clone()))
+            .unwrap();
+        profile.listed = true;
+        env.storage().persistent().set(&DataKey::Profile(player), &profile);
+    }
+
+    // Anyone can liquidate an expired loan — ownership transfers to admin, pool recovers principal
+    pub fn liquidate(env: Env, player: Address) {
+        let loan: LoanRecord = env.storage().persistent()
+            .get(&DataKey::LoanRecord(player.clone()))
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::NoActiveLoan));
+        if env.ledger().sequence() <= loan.due_ledger {
+            panic_with_error!(&env, ContractError::LoanNotExpired);
+        }
+        let admin: Address = env.storage().instance().get(&DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::NotInitialized));
+        // Recover principal into pool (collateral covers the debt)
+        let pool: i128 = env.storage().persistent().get(&DataKey::LoanPool).unwrap_or(0);
+        env.storage().persistent().set(&DataKey::LoanPool, &(pool + loan.principal));
+        env.storage().persistent().remove(&DataKey::LoanRecord(player.clone()));
+        // Transfer ownership to admin and re-list for community repo auction
+        let mut profile: PlayerProfile = env.storage().persistent()
+            .get(&DataKey::Profile(player.clone()))
+            .unwrap();
+        profile.owner = admin;
+        profile.listed = true;
+        env.storage().persistent().set(&DataKey::Profile(player), &profile);
+    }
+
+    pub fn get_loan(env: Env, player: Address) -> Option<LoanRecord> {
+        env.storage().persistent().get(&DataKey::LoanRecord(player))
+    }
+
+    pub fn get_pool_balance(env: Env) -> i128 {
+        env.storage().persistent().get(&DataKey::LoanPool).unwrap_or(0)
     }
 
     pub fn get_owned_assets(env: Env, owner: Address) -> soroban_sdk::Vec<MarketItem> {

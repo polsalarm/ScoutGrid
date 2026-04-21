@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Trophy, ShoppingBag, Zap, Shield, RefreshCw, Cpu, Clock, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Trophy, ShoppingBag, Zap, Shield, RefreshCw, Cpu, Clock, ShieldCheck, ExternalLink, Landmark } from 'lucide-react';
 import { useScoutStore } from '../lib/store';
-import { syncFullRegistry, acceptBid } from '../lib/contract';
+import { syncFullRegistry, acceptBid, getActiveLoan } from '../lib/contract';
 import { showToast } from '../components/ui/Toast';
-import type { Player } from '../lib/types';
+import type { Player, LoanRecord } from '../lib/types';
+import { LoanBadge } from '../components/ui/LoanBadge';
+import { RepayModal } from '../components/ui/RepayModal';
+import { LoanModal } from '../components/ui/LoanModal';
 
 function RosterCard({ player, walletAddress, isOffer }: { player: Player; walletAddress: string | null; isOffer?: boolean }) {
-  const { setPlayers } = useScoutStore();
+  const { setPlayers, loans, setLoan } = useScoutStore();
   const [isAccepting, setIsAccepting] = useState(false);
+  const [showRepayModal, setShowRepayModal] = useState(false);
+  const [showLoanModal, setShowLoanModal] = useState(false);
+
+  const activeLoan: LoanRecord | null = loans[player.address] ?? null;
+  const hasBid = player.highestBid && player.highestBid > 0;
 
   const handleAcceptBid = async () => {
     if (!walletAddress) return;
@@ -24,8 +32,6 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
       setIsAccepting(false);
     }
   };
-
-  const hasBid = player.highestBid && player.highestBid > 0;
 
   return (
     <div className="bg-[#0a0f1b] border border-slate-800 hover:border-electric/50 hover:scale-[1.03] transition-all duration-200 p-6 flex flex-col relative group cursor-default">
@@ -113,9 +119,23 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
         </div>
       </div>
 
+      {/* Loan badge — shown when contract is pledged as collateral */}
+      {!isOffer && activeLoan && (
+        <div className="mb-3">
+          <LoanBadge loan={activeLoan} />
+        </div>
+      )}
+
       {/* CTA: Final design harmonized */}
       <div className="space-y-2">
-        {!isOffer && hasBid ? (
+        {!isOffer && activeLoan ? (
+          <button
+            onClick={() => setShowRepayModal(true)}
+            className="w-full border border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-900 py-3 text-xs font-bold uppercase tracking-widest transition-all italic"
+          >
+            Repay & Unlock
+          </button>
+        ) : !isOffer && hasBid ? (
           <button
             onClick={handleAcceptBid}
             disabled={isAccepting}
@@ -133,13 +153,38 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
             Awaiting Seller Response
           </div>
         )}
+        {!isOffer && !activeLoan && (
+          <button
+            onClick={() => setShowLoanModal(true)}
+            className="w-full flex items-center justify-center space-x-1.5 border border-amber-500/30 bg-amber-500/5 text-amber-500 hover:bg-amber-500/15 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors"
+          >
+            <Landmark size={11} />
+            <span>Borrow Against</span>
+          </button>
+        )}
       </div>
+
+      {showRepayModal && activeLoan && (
+        <RepayModal
+          player={player}
+          loan={activeLoan}
+          onClose={() => setShowRepayModal(false)}
+          onSuccess={() => { setLoan(player.address, null); syncFullRegistry(walletAddress!, setPlayers); }}
+        />
+      )}
+      {showLoanModal && (
+        <LoanModal
+          player={player}
+          onClose={() => setShowLoanModal(false)}
+          onSuccess={() => syncFullRegistry(walletAddress!, setPlayers)}
+        />
+      )}
     </div>
   );
 }
 
 export function MyRoster() {
-  const { players, walletAddress, setPlayers } = useScoutStore();
+  const { players, walletAddress, setPlayers, setLoan } = useScoutStore();
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
@@ -151,6 +196,18 @@ export function MyRoster() {
     };
     runSync();
   }, [walletAddress, setPlayers]);
+
+  // Sync active loans for all owned players
+  useEffect(() => {
+    if (!walletAddress) return;
+    const ownedAddresses = players
+      .filter(p => p.owner === walletAddress)
+      .map(p => p.address);
+    ownedAddresses.forEach(async (addr) => {
+      const loan = await getActiveLoan(addr);
+      setLoan(addr, loan);
+    });
+  }, [players, walletAddress, setLoan]);
 
   const ownedPlayers = players.filter(p => p.owner === walletAddress);
   const biddedPlayers = players.filter(p =>

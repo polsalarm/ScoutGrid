@@ -252,6 +252,34 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "PlayerRegistry"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 4095
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "Profile"
                   },
                   {
@@ -264,10 +292,34 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "achievements"
+                    },
+                    "val": {
+                      "vec": []
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "bio"
+                    },
+                    "val": {
+                      "string": "ScoutGrid Veteran"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "list_price"
                     },
                     "val": {
                       "i128": "3000"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "listed"
+                    },
+                    "val": {
+                      "bool": false
                     }
                   },
                   {
@@ -292,6 +344,14 @@
                     },
                     "val": {
                       "string": "Jungler"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "username"
+                    },
+                    "val": {
+                      "string": "LegacyPlayer"
                     }
                   },
                   {

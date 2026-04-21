@@ -1,9 +1,9 @@
 /**
  * ScoutGrid Soroban Contract Client
  *
- * Contract:  CAYU6ZAZVKY3WVB2GZCTNS3EZT2WEY2OWWBMYWGIJ6FLYQNNCP2ZY27P
+ * Contract:  CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA
  * Network:   Stellar Testnet
- * Admin:     GCF4N2ZDIGVYGSXUT7XCUBR3WHPT2FYTIADXUODQZ57MOWX6USIEW2CY
+ * Admin:     GBRG6SU7PTXT2Z6TQFTIRSF5PQ5SL2GSLSOD6YGWJHQFNE237KKFXDNW
  *
  * @stellar/stellar-sdk v15: Protocol 22 native, rpc.assembleTransaction, rpc.Api
  */
@@ -11,13 +11,14 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { StellarWalletsKit } from './walletKit';
 import { showToast } from '../components/ui/Toast';
-import type { Player } from './types';
+import type { Player, LoanRecord } from './types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export const CONTRACT_ID = 'CBJKAS62XBI54L4BTMLUVTWZGBJJMM23GYMN2UPZHATY4WOIPVYV74U6';
+export const LOAN_DURATION_LEDGERS = 518_400; // ~30 days — mirrors contract constant
+export const CONTRACT_ID = 'CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA';
 export const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
 export const RPC_URL = 'https://soroban-testnet.stellar.org';
-export const ADMIN_ADDRESS = 'GCF4N2ZDIGVYGSXUT7XCUBR3WHPT2FYTIADXUODQZ57MOWX6USIEW2CY';
+export const ADMIN_ADDRESS = 'GBRG6SU7PTXT2Z6TQFTIRSF5PQ5SL2GSLSOD6YGWJHQFNE237KKFXDNW';
 
 // 1 XLM = 10,000,000 stroops (i128)
 export function xlmToStroops(xlm: number): bigint {
@@ -358,6 +359,89 @@ async function simulateInvoke(method: string, args: StellarSdk.xdr.ScVal[]): Pro
   const sim = await server.simulateTransaction(tx);
   if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
   return sim.result.retval;
+}
+
+/** getCurrentLedger — latest confirmed ledger sequence number */
+export async function getCurrentLedger(): Promise<number> {
+  try {
+    const info = await getServer().getLatestLedger();
+    return info.sequence;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Loan Functions ───────────────────────────────────────────────────────────
+
+/** fundPool — admin deposits XLM into the lending pool */
+export async function fundPool(
+  funderAddress: string,
+  amountXlm: number
+): Promise<void> {
+  await invokeContract(funderAddress, 'fund_pool', [
+    addrVal(funderAddress),
+    i128Val(amountXlm),
+  ]);
+}
+
+/** takePlayerLoan — lock a player contract as collateral and borrow XLM */
+export async function takePlayerLoan(
+  borrowerAddress: string,
+  playerAddress: string,
+  amountXlm: number
+): Promise<void> {
+  await invokeContract(borrowerAddress, 'take_loan', [
+    addrVal(borrowerAddress),
+    addrVal(playerAddress),
+    i128Val(amountXlm),
+  ]);
+}
+
+/** repayPlayerLoan — repay principal + compound interest to unlock collateral */
+export async function repayPlayerLoan(
+  borrowerAddress: string,
+  playerAddress: string
+): Promise<void> {
+  await invokeContract(borrowerAddress, 'repay_loan', [
+    addrVal(borrowerAddress),
+    addrVal(playerAddress),
+  ]);
+}
+
+/** liquidateLoan — callable by anyone after the loan term expires */
+export async function liquidateLoan(playerAddress: string, callerAddress: string): Promise<void> {
+  await invokeContract(callerAddress, 'liquidate', [
+    addrVal(playerAddress),
+  ]);
+}
+
+/** getActiveLoan — read active loan for a player (null if none) */
+export async function getActiveLoan(playerAddress: string): Promise<LoanRecord | null> {
+  try {
+    const retval = await simulateInvoke('get_loan', [addrVal(playerAddress)]);
+    if (!retval) return null;
+    const native = StellarSdk.scValToNative(retval);
+    if (!native || typeof native !== 'object') return null;
+    return {
+      borrower: native.borrower.toString(),
+      principal: stroopsToXlm(BigInt(native.principal)),
+      startLedger: Number(native.start_ledger),
+      dueLedger: Number(native.due_ledger),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** getPoolBalance — current XLM available in the lending pool */
+export async function getPoolBalance(): Promise<number> {
+  try {
+    const retval = await simulateInvoke('get_pool_balance', []);
+    if (!retval) return 0;
+    return stroopsToXlm(parseI128(retval.i128()));
+  } catch {
+    return 0;
+  }
 }
 
 /**

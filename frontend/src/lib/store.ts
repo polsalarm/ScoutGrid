@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Player } from './types';
+import type { Player, LoanRecord } from './types';
 
 interface ScoutState {
   walletAddress: string | null;
@@ -11,6 +11,8 @@ interface ScoutState {
   isMinted: boolean;
   activeWalletId: string | null;
   isWalletModalOpen: boolean;
+  loans: Record<string, LoanRecord>;
+  setLoan: (playerAddress: string, loan: LoanRecord | null) => void;
   setWalletAddress: (address: string | null) => void;
   setUsername: (name: string | null) => void;
   setIsRegistered: (status: boolean) => void;
@@ -36,6 +38,13 @@ export const useScoutStore = create<ScoutState>()(
       isMinted: false,
       activeWalletId: null,
       isWalletModalOpen: false,
+      loans: {},
+      setLoan: (playerAddress, loan) => set((state) => {
+        const next = { ...state.loans };
+        if (loan === null) delete next[playerAddress];
+        else next[playerAddress] = loan;
+        return { loans: next };
+      }),
       setActiveWalletId: (id) => set({ activeWalletId: id }),
       setIsWalletModalOpen: (open) => set({ isWalletModalOpen: open }),
       setWalletAddress: (address) => set({ walletAddress: address }),
