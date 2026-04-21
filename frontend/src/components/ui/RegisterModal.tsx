@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, X, Zap, AlertCircle } from 'lucide-react';
 import { registerUser, getUsername } from '../../lib/contract';
+import { HOTWALLET_ID } from '../../lib/walletKit';
 import { useScoutStore } from '../../lib/store';
 import { showToast } from './Toast';
 
@@ -11,28 +12,31 @@ interface RegisterModalProps {
 }
 
 export function RegisterModal({ onClose, onSuccess }: RegisterModalProps) {
-  const { walletAddress, setIsRegistered, setUsername } = useScoutStore();
+  const { walletAddress, activeWalletId, setIsRegistered, setUsername } = useScoutStore();
   const [ign, setIgn] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
 
+  const isHotWallet = activeWalletId === HOTWALLET_ID;
+
   const handleRegister = async () => {
     if (!ign) return;
     setError('');
-
     setIsRegistering(true);
     try {
       const existingIgn = await getUsername(walletAddress!);
-
       if (!existingIgn) {
-        await registerUser(walletAddress!, ign);
-      } else {
-        console.log('[Register] Already registered with IGN:', existingIgn);
+        if (isHotWallet) {
+          // HOT Wallet: skip on-chain tx — wallet connection already verified ownership
+          console.log('[Register] HOT Wallet demo mode — skipping on-chain registration.');
+        } else {
+          await registerUser(walletAddress!, ign);
+        }
       }
-
+      const resolvedIgn = existingIgn || ign;
       setIsRegistered(true);
-      setUsername(existingIgn || ign);
-      showToast('success', 'Handle Claimed', `Welcome to the Grid, ${existingIgn || ign}!`);
+      setUsername(resolvedIgn);
+      showToast('success', 'Handle Claimed', `Welcome to the Grid, ${resolvedIgn}!`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -58,7 +62,7 @@ export function RegisterModal({ onClose, onSuccess }: RegisterModalProps) {
               <Shield className="text-electric" size={24} />
               <span>JOIN THE GRID</span>
             </h2>
-            <p className="text-slate-500 mt-1 font-mono text-[10px] uppercase tracking-widest">Verify Identity on Testnet</p>
+            <p className="text-slate-500 mt-1 font-mono text-[10px] uppercase tracking-widest">Wallet Verified — Claim Your Handle</p>
           </div>
 
           <div className="space-y-6">

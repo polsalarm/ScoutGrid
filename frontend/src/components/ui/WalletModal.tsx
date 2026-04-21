@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Wallet, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { StellarWalletsKit, FREIGHTER_ID, ALBEDO_ID, XBULL_ID, LEDGER_ID } from '../../lib/walletKit';
+import { StellarWalletsKit, FREIGHTER_ID, ALBEDO_ID, XBULL_ID, HOTWALLET_ID } from '../../lib/walletKit';
 import { showToast } from './Toast';
 
 interface WalletModalProps {
@@ -14,6 +14,8 @@ const WALLETS = [
     id: FREIGHTER_ID,
     name: 'Freighter',
     description: 'Browser extension by Stellar.org',
+    installUrl: 'https://freighter.app/',
+    installLabel: 'Install Freighter',
     borderColor: 'border-electric/50 hover:border-electric',
     textColor: 'text-electric',
     bgColor: 'hover:bg-electric/10',
@@ -22,6 +24,8 @@ const WALLETS = [
     id: ALBEDO_ID,
     name: 'Albedo',
     description: 'Web-based transaction signer',
+    installUrl: 'https://albedo.link/',
+    installLabel: 'Open Albedo',
     borderColor: 'border-purple-500/50 hover:border-purple-400',
     textColor: 'text-purple-400',
     bgColor: 'hover:bg-purple-500/10',
@@ -30,29 +34,40 @@ const WALLETS = [
     id: XBULL_ID,
     name: 'xBull',
     description: 'Mobile-first Stellar wallet',
+    installUrl: 'https://xbull.app/',
+    installLabel: 'Install xBull',
     borderColor: 'border-yellow-500/50 hover:border-yellow-400',
     textColor: 'text-yellow-400',
     bgColor: 'hover:bg-yellow-500/10',
   },
   {
-    id: LEDGER_ID,
-    name: 'Ledger',
-    description: 'Ledger hardware wallet',
-    borderColor: 'border-green-500/50 hover:border-green-400',
-    textColor: 'text-green-400',
-    bgColor: 'hover:bg-green-500/10',
+    id: HOTWALLET_ID,
+    name: 'HOT Wallet',
+    description: 'NEAR-connected multi-chain wallet',
+    installUrl: 'https://hot-labs.org/',
+    installLabel: 'Get HOT Wallet',
+    borderColor: 'border-orange-500/50 hover:border-orange-400',
+    textColor: 'text-orange-400',
+    bgColor: 'hover:bg-orange-500/10',
   },
 ] as const;
+
+function isNotInstalledError(_walletId: string, _msg: string): boolean {
+  const lower = _msg.toLowerCase();
+  return lower.includes('not installed') || lower.includes('not found') || lower.includes('undefined') || lower.includes('no provider') || lower.includes('extension');
+}
 
 export function WalletModal({ onClose, onSuccess }: WalletModalProps) {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [phase, setPhase] = useState<'select' | 'signing'>('select');
   const [error, setError] = useState('');
+  const [failedWalletId, setFailedWalletId] = useState<string | null>(null);
 
   const handleSelect = async (walletId: string) => {
     const wallet = WALLETS.find(w => w.id === walletId);
     setConnecting(walletId);
     setError('');
+    setFailedWalletId(null);
     try {
       // Phase 1: Connect & fetch address
       StellarWalletsKit.setWallet(walletId);
@@ -84,7 +99,12 @@ export function WalletModal({ onClose, onSuccess }: WalletModalProps) {
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to connect wallet.';
-      setError(msg);
+      if (isNotInstalledError(walletId, msg)) {
+        setFailedWalletId(walletId);
+        setError(`${wallet?.name ?? 'Wallet'} is not installed or could not connect. Click the link below to set it up.`);
+      } else {
+        setError(msg);
+      }
       showToast('error', 'Connection Failed', msg);
     } finally {
       setConnecting(null);
@@ -125,40 +145,61 @@ export function WalletModal({ onClose, onSuccess }: WalletModalProps) {
           {WALLETS.map((wallet) => {
             const isConnecting = connecting === wallet.id;
             return (
-              <button
-                key={wallet.id}
-                onClick={() => handleSelect(wallet.id)}
-                disabled={connecting !== null}
-                className={`w-full flex items-center justify-between border px-4 py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${wallet.borderColor} ${wallet.bgColor}`}
-              >
-                <div className="text-left">
-                  <div className={`font-bold text-sm uppercase tracking-widest ${wallet.textColor}`}>
-                    {wallet.name}
+              <div key={wallet.id}>
+                <button
+                  onClick={() => handleSelect(wallet.id)}
+                  disabled={connecting !== null}
+                  className={`w-full flex items-center justify-between border px-4 py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${wallet.borderColor} ${wallet.bgColor}`}
+                >
+                  <div className="text-left">
+                    <div className={`font-bold text-sm uppercase tracking-widest ${wallet.textColor}`}>
+                      {wallet.name}
+                    </div>
+                    <div className="text-slate-500 font-mono text-[10px] mt-0.5">
+                      {wallet.description}
+                    </div>
                   </div>
-                  <div className="text-slate-500 font-mono text-[10px] mt-0.5">
-                    {wallet.description}
-                  </div>
-                </div>
-                {isConnecting && (
-                  <div className="flex items-center space-x-1.5">
-                    {phase === 'signing' ? (
-                      <ShieldCheck size={14} className={`animate-pulse ${wallet.textColor}`} />
-                    ) : (
-                      <Loader2 size={14} className={`animate-spin ${wallet.textColor}`} />
-                    )}
-                    <span className={`text-[9px] font-mono uppercase tracking-widest ${wallet.textColor}`}>
-                      {phase === 'signing' ? 'Sign' : 'Link'}
-                    </span>
-                  </div>
-                )}
-              </button>
+                  {isConnecting && (
+                    <div className="flex items-center space-x-1.5">
+                      {phase === 'signing' ? (
+                        <ShieldCheck size={14} className={`animate-pulse ${wallet.textColor}`} />
+                      ) : (
+                        <Loader2 size={14} className={`animate-spin ${wallet.textColor}`} />
+                      )}
+                      <span className={`text-[9px] font-mono uppercase tracking-widest ${wallet.textColor}`}>
+                        {phase === 'signing' ? 'Sign' : 'Link'}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              </div>
             );
           })}
 
           {error && (
-            <div className="flex items-start space-x-2 text-pink-400 font-mono text-[10px] border border-pink-500/30 bg-pink-500/5 px-3 py-2">
-              <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="flex flex-col space-y-2 border border-pink-500/30 bg-pink-500/5 px-3 py-2">
+              <div className="flex items-start space-x-2 text-pink-400 font-mono text-[10px]">
+                <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+              {failedWalletId && (() => {
+                const w = WALLETS.find(w => w.id === failedWalletId);
+                return w ? (
+                  <a
+                    href={w.installUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-[10px] font-bold uppercase tracking-widest font-mono underline ${
+                      failedWalletId === HOTWALLET_ID ? 'text-orange-400' :
+                      failedWalletId === ALBEDO_ID    ? 'text-purple-400' :
+                      failedWalletId === XBULL_ID     ? 'text-yellow-400' :
+                      'text-electric'
+                    }`}
+                  >
+                    → {w.installLabel}
+                  </a>
+                ) : null;
+              })()}
             </div>
           )}
 

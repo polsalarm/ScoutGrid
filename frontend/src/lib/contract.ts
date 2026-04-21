@@ -99,8 +99,13 @@ async function invokeContract(
 
   const sendResponse = await server.sendTransaction(signedTx);
   if (sendResponse.status === 'ERROR') {
-    showToast('error', 'Submission Failed', 'Network rejected the transaction.');
-    throw new Error(`Network rejected transaction: ${JSON.stringify(sendResponse.errorResult)}`);
+    const resultJson = JSON.stringify(sendResponse.errorResult ?? {});
+    const isBadAuth = resultJson.includes('txBadAuth');
+    const userMsg = isBadAuth
+      ? 'Signature rejected (txBadAuth). Your wallet may be set to Mainnet — switch it to Testnet and try again. Freighter: Settings → Network → Testnet.'
+      : 'Network rejected the transaction.';
+    showToast('error', 'Submission Failed', userMsg);
+    throw new Error(`Network rejected transaction: ${resultJson}`);
   }
 
   showToast('info', 'Transaction Submitted', `Hash: ${sendResponse.hash.slice(0, 12)}…`, 4000);

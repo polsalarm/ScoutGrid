@@ -434,8 +434,11 @@ The following screenshots show the same marketplace actions — bid, buyout, and
 ---
 
 ### 🛡️ Identity & Onboarding
-Every scout's journey begins with a wallet connection followed by on-chain handle registration.
-| 1. Connect & Verify | 2. On-Chain Registration |
+Every scout's journey begins with a wallet connection followed by handle registration. Wallet ownership is verified via a cryptographic signature challenge at connection time.
+
+> **Note:** On-chain IGN registration (`register_user`) writes to the Stellar contract and requires a small gas fee in XLM. For the hackathon demo, wallet connection and identity verification are shown fully functional — the handle is claimed locally after the wallet signature is verified. Full on-chain registration is live and callable on Testnet for wallets with funded accounts (e.g. Freighter + Friendbot).
+
+| 1. Connect & Verify | 2. Claim Handle |
 | :---: | :---: |
 | ![Verify Identity](./frontend/ui_images/VerifyIdentity.png) | ![Verify Transaction](./frontend/ui_images/Verify-%20Transaction.png) |
 
