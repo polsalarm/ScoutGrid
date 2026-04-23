@@ -14,20 +14,10 @@
 
 ## 🎬 Demo Video
 
-> **📽️ [Watch the 1-Minute Demo →](#)** *(replace `#` with your video URL after uploading)*
+> **📽️ [Watch the 1-Minute Demo →](https://drive.google.com/file/d/1V9HstPxJKp1PWQVQDrBdA8UQ0tqmqs99/view?usp=sharing)** 
 >
 > *No voiceover — all functionality is shown via on-screen text captions. Covers: wallet connection, handle registration, marketplace bidding, instant buyout, collateral loans, Nova AI advisor, and on-chain verification.*
 
-| Feature Coverage | Timestamp |
-| :--- | :--- |
-| Wallet Connection & Identity Verification | 0:07 |
-| Handle Registration (On-Chain IGN) | 0:15 |
-| Marketplace — Live Talent Grid | 0:22 |
-| Bargain Bidding & Escrow | 0:27 |
-| Instant Buyout & Ownership Transfer | 0:32 |
-| Collateral Loan (Borrow Against Player) | 0:38 |
-| Nova AI Market Intelligence | 0:46 |
-| Stellar Explorer — On-Chain Proof | 0:52 |
 
 ---
 
@@ -165,6 +155,7 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 | Feature | Usage |
 | :--- | :--- |
 | **Soroban Smart Contracts** | Atomic marketplace logic — lock, release, bid processing, and royalty enforcement. |
+| **Stellar Wallets Kit** | `@creit.tech/stellar-wallets-kit` — unified multi-wallet abstraction layer supporting Freighter, Albedo, xBull, and HOT Wallet. Single API for connect, sign, and address fetch across all providers. |
 | **Native Assets / USDC** | Trustless settlement using Stellar assets, ensuring zero payment risk. |
 | **Trustlines** | KYC/Gating logic — ensures only verified agencies can receive high-value contract funds. |
 | **Clawback** | Security feature enabling the admin to reverse funds during a verified dispute grace period. |
@@ -185,7 +176,7 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 
 > **Deployed on Vercel**: [scout-grid.vercel.app](https://scout-grid.vercel.app/)
 >
-> **Demo Video**: [Watch on YouTube / Loom](#) *(replace `#` with your video link — no voiceover, text captions only)*
+> **Demo Video**: [Watch on gDrive](https://drive.google.com/file/d/1V9HstPxJKp1PWQVQDrBdA8UQ0tqmqs99/view?usp=sharing) 
 
 ### 🌐 On-Chain Explorer Verification
 All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
