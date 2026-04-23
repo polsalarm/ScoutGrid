@@ -18,6 +18,10 @@
 >
 > *No voiceover — all functionality is shown via on-screen text captions. Covers: wallet connection, handle registration, marketplace bidding, instant buyout, collateral loans, Nova AI advisor, and on-chain verification.*
 
+---
+## 🌐 Live Demo
+
+> **Deployed on Vercel**: [scout-grid.vercel.app](https://scout-grid.vercel.app/)
 
 ---
 
@@ -172,11 +176,6 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 | **Admin/Factory Account** | Stellar Testnet | `GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP` |
 | **Native Asset (XLM)** | Stellar Testnet | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
 
-### 🌐 Live Demo & Video
-
-> **Deployed on Vercel**: [scout-grid.vercel.app](https://scout-grid.vercel.app/)
->
-> **Demo Video**: [Watch on gDrive](https://drive.google.com/file/d/1V9HstPxJKp1PWQVQDrBdA8UQ0tqmqs99/view?usp=sharing) 
 
 ### 🌐 On-Chain Explorer Verification
 All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
@@ -430,11 +429,14 @@ Test the grid directly from your terminal using the **Stellar CLI**.
 ## 🚀 Live Interface Walkthrough
 
 ### 🔐 Multi-Wallet Connection
-ScoutGrid supports four wallet providers via a unified picker modal. Scouts can connect, bid, buy, and sell using any supported wallet — the contract interaction layer is completely wallet-agnostic.
+ScoutGrid supports four wallet providers via a unified picker modal powered by `@creit.tech/stellar-wallets-kit`. Scouts can connect, bid, buy, and sell using any supported wallet — the contract interaction layer is completely wallet-agnostic.
 
-| Wallet Picker Modal | Freighter Connection | Albedo Connection |
-| :---: | :---: | :---: |
-| ![Wallet Picker](./frontend/ui_images/WalletPicker.png) | ![Freighter Connect](./frontend/ui_images/WalletConnect_Freighter.png) | ![Albedo Connect](./frontend/ui_images/WalletConnect_Albedo.png) |
+| Wallet | Type | Connection Method | Notes |
+| :--- | :--- | :--- | :--- |
+| **Freighter** | Browser Extension | Extension popup → approve | Recommended for development. Full tx signing. |
+| **Albedo** | Web-based | In-page modal → approve | No install required. Works in any browser. |
+| **xBull** | Mobile / Extension | Extension or deeplink → approve | Mobile-first. Full Soroban tx support. |
+| **HOT Wallet** | Multi-chain | Web modal → approve | NEAR-connected. Identity verified via connection; registration shown in demo mode. |
 
 #### Cross-Wallet Transaction History (Stellar Testnet)
 The following screenshots show the same marketplace actions — bid, buyout, and sell — executed from different wallet providers, all verifiable on the Stellar ledger.
