@@ -1,9 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Player } from './types';
 
-// User provided API Key for Gemini Free Tier
-const API_KEY = 'AIzaSyB37Nn_VNYJlE-dE-HN1HvWUU5R-vzkCQ0';
-const genAI = new GoogleGenerativeAI(API_KEY);
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY ?? '');
 
 const SYSTEM_PROMPT = `
 You are NOVA, a cynical, high-stakes AI Scout Advisor for the ScoutGrid pro-gaming marketplace. 

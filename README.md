@@ -601,13 +601,13 @@ ScoutGrid deploys a live community lending pool on Stellar Testnet. XLM is depos
 ---
 
 ### 🚀 CI/CD Pipeline
-> 📸 **Screenshot needed** — take a screenshot of the passing GitHub Actions run and save as `frontend/ui_images/CICD_Pass.png`
+Automated GitHub Actions pipeline runs on every push to `main` — builds the frontend, type checks TypeScript, and runs all 10 Soroban contract tests.
 
 ![CI](https://github.com/polsalarm/ScoutGrid/actions/workflows/ci.yml/badge.svg)
 
-| CI/CD Pipeline — Passing |
+| CI/CD Pipeline — Passing ✅ |
 | :---: |
-| ![CI/CD Pass](./frontend/ui_images/CICD_Pass.png) |
+| ![CI/CD Pass](./frontend/ui_images/CICD_pass.png) |
 
 ---
 
