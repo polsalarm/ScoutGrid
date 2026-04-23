@@ -95,8 +95,7 @@ export function Marketplace() {
 
         {/* Subtext */}
         <p className="text-slate-400 font-mono text-sm max-w-xl leading-relaxed">
-          Access verified smart contracts of professional players. Review metrics,<br />
-          evaluate win points, and secure talent directly on the Soroban network.
+          Access verified smart contracts of professional players. Review metrics, evaluate win points, and secure talent directly on the Soroban network.
         </p>
       </div>
 

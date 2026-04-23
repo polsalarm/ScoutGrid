@@ -82,14 +82,14 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#020710]/95 backdrop-blur-xl">
-      <div className="w-full max-w-4xl bg-[#0a1118] border border-electric/30 shadow-[0_0_50px_rgba(0,240,255,0.15)] relative overflow-hidden">
-        
-        {/* Decorative Grid */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#020710]/95 backdrop-blur-xl">
+      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="w-full max-w-4xl bg-[#0a1118] border border-electric/30 shadow-[0_0_50px_rgba(0,240,255,0.15)] relative">
+
+        {/* Decorative top bar */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-electric to-transparent" />
 
-        <div className="relative p-8">
+        <div className="relative p-6 sm:p-8">
           <div className="flex justify-between items-start mb-8">
             <div>
               <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center space-x-3">
@@ -230,6 +230,7 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>,
     document.body

@@ -58,7 +58,7 @@ export function Layout({ children }: LayoutProps) {
       <FlatGridBackground />
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar page={page} onNavigate={setPage} />
-        <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-24 sm:pb-12">
           {children(page, setPage)}
         </main>
       </div>

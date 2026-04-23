@@ -37,16 +37,16 @@ export function AIChatbot() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-[#0a0f1b]/80 text-electric p-4 rounded-full border border-electric/40 hover:bg-electric hover:shadow-[0_0_20px_#00f3ff] hover:text-slate-900 transition-all z-50 group"
+        className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 bg-[#0a0f1b]/80 text-electric p-3 sm:p-4 rounded-full border border-electric/40 hover:bg-electric hover:shadow-[0_0_20px_#00f3ff] hover:text-slate-900 transition-all z-50 group"
       >
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#39ff14] rounded-full border-2 border-slate-900 animate-pulse" />
-        <MessageSquare size={24} className="group-hover:scale-110 transition-transform" />
+        <MessageSquare size={22} className="group-hover:scale-110 transition-transform" />
       </button>
     );
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 ${isExpanded ? 'w-[500px] h-[600px]' : 'w-80 h-[450px]'} bg-[#0a0f1b]/95 backdrop-blur-xl border border-electric/30 shadow-[0_0_40px_rgba(0,243,255,0.1)] flex flex-col z-50 transition-all duration-300 overflow-hidden`}>
+    <div className={`fixed bottom-0 right-0 sm:bottom-6 sm:right-6 ${isExpanded ? 'w-full sm:w-[500px] h-[100dvh] sm:h-[600px]' : 'w-full sm:w-80 h-[65dvh] sm:h-[450px]'} bg-[#0a0f1b]/95 backdrop-blur-xl border-t sm:border border-electric/30 shadow-[0_0_40px_rgba(0,243,255,0.1)] flex flex-col z-50 transition-all duration-300 overflow-hidden`}>
 
       {/* HUD Header */}
       <div className="bg-slate-950/80 border-b border-electric/20 p-4 flex justify-between items-center overflow-hidden relative">

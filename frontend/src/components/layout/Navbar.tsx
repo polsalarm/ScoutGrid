@@ -95,11 +95,12 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
   return (
     <>
       <nav className="border-b border-electric/20 bg-[#020710]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-2 text-electric font-black text-xl italic tracking-wider">
-                <Target size={24} />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            {/* Logo — always visible, shrink-0 so it never gets squeezed */}
+            <div className="flex items-center space-x-6 min-w-0">
+              <div className="flex items-center space-x-2 text-electric font-black text-base sm:text-xl italic tracking-wider flex-shrink-0">
+                <Target size={20} />
                 <span>SCOUTGRID</span>
               </div>
               <div className="hidden md:flex space-x-6">
@@ -111,7 +112,8 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            {/* Right-side actions — flex-shrink-0 so they don't get crushed */}
+            <div className="flex items-center space-x-2 flex-shrink-0">
               {isRegistered && !isMinted && (
                 <button
                   onClick={() => setIsMintOpen(true)}
@@ -123,35 +125,51 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
               )}
 
               {walletAddress ? (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
                   <div
                     onClick={() => {
                       setWalletAddress(null); setIsRegistered(false); setIsMinted(false);
                       setUsername(null); setActiveWalletId(null);
                       showToast('info', 'Wallet Disconnected', 'Session cleared. Connect again to resume.');
                     }}
-                    className="flex items-center space-x-2 border border-electric/30 bg-electric/5 px-3 py-1.5 font-mono text-xs text-electric cursor-pointer hover:bg-red-500/10 hover:border-red-500/50 transition-all group"
+                    className="flex items-center space-x-1.5 border border-electric/30 bg-electric/5 px-2 sm:px-3 py-1.5 font-mono text-xs text-electric cursor-pointer hover:bg-red-500/10 hover:border-red-500/50 transition-all group"
                   >
                     {isRegistered ? <CheckCircle2 size={12} className="text-[#39ff14]" /> : <Wallet size={12} />}
-                    <span className="group-hover:hidden truncate max-w-[100px]">{username || shortAddr}</span>
-                    <span className="hidden group-hover:inline text-red-500">DISCONNECT</span>
+                    <span className="group-hover:hidden truncate max-w-[60px] sm:max-w-[100px]">{username || shortAddr}</span>
+                    <span className="hidden group-hover:inline text-red-500 text-[10px]">DISC.</span>
                   </div>
                   {!isRegistered && (
-                    <button onClick={() => setIsRegisterOpen(true)} className="border border-pink-500/50 bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors">
-                      Verify Identity
+                    <button
+                      onClick={() => setIsRegisterOpen(true)}
+                      className="border border-pink-500/50 bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors"
+                    >
+                      <span className="hidden sm:inline">Verify Identity</span>
+                      <span className="sm:hidden">Verify</span>
                     </button>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={() => setIsWalletModalOpen(true)}
-                  className="flex items-center space-x-2 bg-electric text-slate-900 px-5 py-2 font-bold text-sm tracking-wide hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all"
+                  className="flex items-center space-x-2 bg-electric text-slate-900 px-3 sm:px-5 py-2 font-bold text-sm tracking-wide hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all"
                 >
                   <Wallet size={16} />
-                  <span>Connect Wallet</span>
+                  <span className="hidden sm:inline">Connect Wallet</span>
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Mobile bottom nav — visible only on small screens */}
+          <div className="flex md:hidden border-t border-electric/10 py-1.5 space-x-4">
+            <span onClick={() => onNavigate('marketplace')} className={`transition-colors cursor-pointer text-xs font-medium ${page === 'marketplace' ? 'text-electric' : 'text-slate-500'}`}>Marketplace</span>
+            <span onClick={() => onNavigate('roster')} className={`transition-colors cursor-pointer text-xs font-medium ${page === 'roster' ? 'text-electric' : 'text-slate-500'}`}>My Roster</span>
+            {isRegistered && (
+              <span onClick={() => onNavigate('achievements')} className={`transition-colors cursor-pointer text-xs font-medium ${page === 'achievements' ? 'text-electric' : 'text-slate-500'}`}>Achievements</span>
+            )}
+            {isRegistered && !isMinted && (
+              <span onClick={() => setIsMintOpen(true)} className="text-electric text-xs font-bold cursor-pointer animate-pulse">+ List Player</span>
+            )}
           </div>
         </div>
       </nav>
