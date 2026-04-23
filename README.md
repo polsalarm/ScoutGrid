@@ -179,7 +179,7 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 
 ### 🌐 On-Chain Explorer Verification
 All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
-![StellarExpert Explorer](./frontend/ui_images/StellarExpert.png)
+![StellarExpert Explorer](./frontend/ui_images/StellarExpert1.png)
 
 ---
 
