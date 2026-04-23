@@ -438,6 +438,14 @@ ScoutGrid supports four wallet providers via a unified picker modal powered by `
 | **xBull** | Mobile / Extension | Extension or deeplink → approve | Mobile-first. Full Soroban tx support. |
 | **HOT Wallet** | Multi-chain | Web modal → approve | NEAR-connected. Identity verified via connection; registration shown in demo mode. |
 
+| Wallet Picker Modal | Freighter Connection | Albedo Connection | xBull Connection |
+| :---: | :---: | :---: | :---: |
+| ![Wallet Picker](./frontend/ui_images/WalletPicker.png) | ![Freighter Connect](./frontend/ui_images/WalletConnect_Freighter.png) | ![Albedo Connect](./frontend/ui_images/WalletConnect_Albedo.png) | ![xBull Connect](./frontend/ui_images/WalletConnect_xBull.png) |
+
+| HOT Wallet Connection |
+| :---: |
+| ![HOT Wallet Connect](./frontend/ui_images/WalletConnect_HOT.png) |
+
 #### Cross-Wallet Transaction History (Stellar Testnet)
 The following screenshots show the same marketplace actions — bid, buyout, and sell — executed from different wallet providers, all verifiable on the Stellar ledger.
 
