@@ -509,6 +509,10 @@ ScoutGrid is a **Progressive Web App** — you can install it directly to your h
 3. Scroll down and tap **"Add to Home Screen"**
 4. Tap **Add** — ScoutGrid appears as a native-looking app icon
 
+| Step 1 — Tap Share | Step 2 — Add to Home Screen | Step 3 — App on Home Screen |
+| :---: | :---: | :---: |
+| ![Tap Share](./frontend/ui_images/PWA_Safari_Share.jpg) | ![Add to Home Screen](./frontend/ui_images/PWA_AddToHomeScreen.jpg) | ![Home Screen Icon](./frontend/ui_images/PWA_HomeScreen.jpg) |
+
 **On Android (Chrome):**
 1. Open the live site in **Chrome**
 2. Tap the **three-dot menu** → **"Add to Home Screen"** (or look for the install banner)
