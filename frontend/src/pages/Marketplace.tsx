@@ -4,6 +4,7 @@ import { PlayerCard } from '../components/ui/PlayerCard';
 import { Achievements } from './Achievements';
 import { syncFullRegistry } from '../lib/contract';
 import type { Player } from '../lib/types';
+import { getDemoPlayers } from '../lib/demoData'; // DEMO REMOVE
 
 export function Marketplace() {
   const { players, setPlayers, walletAddress } = useScoutStore();
@@ -23,12 +24,16 @@ export function Marketplace() {
     const interval = setInterval(runSync, 10000); // 10s auto-refresh
     return () => clearInterval(interval);
   }, [setPlayers, walletAddress]);
-  
+
+  // DEMO REMOVE — always merge demo players with real on-chain data
+  const realAddresses = new Set(players.map(p => p.address));
+  const displayPlayers = [...players, ...getDemoPlayers(walletAddress, realAddresses)];
+
   // Deduplicate: only show the latest profile for each address if multiple exist
-  const uniquePlayers = players.reduceRight((acc, player) => {
+  const uniquePlayers = displayPlayers.reduceRight((acc, player) => {
     if (!acc.some(p => p.address === player.address)) acc.push(player);
     return acc;
-  }, [] as Player[]).reverse().filter(p => p.isListed !== false); 
+  }, [] as Player[]).reverse().filter(p => p.isListed !== false);
 
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
@@ -98,7 +103,7 @@ export function Marketplace() {
       <div className="border-b border-slate-800 mb-8 pb-2 flex justify-between items-end">
         <div className="w-full h-[1px] bg-electric/20 absolute left-0" />
         <span className="text-slate-500 font-mono text-xs uppercase tracking-widest z-10 bg-background pr-4">
-          Available Contracts : {players.length}
+          Available Contracts : {uniquePlayers.length}
         </span>
       </div>
 

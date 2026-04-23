@@ -1,9 +1,9 @@
 /**
  * ScoutGrid Soroban Contract Client
  *
- * Contract:  CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA
+ * Contract:  CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED
  * Network:   Stellar Testnet
- * Admin:     GBRG6SU7PTXT2Z6TQFTIRSF5PQ5SL2GSLSOD6YGWJHQFNE237KKFXDNW
+ * Admin:     GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP (scout key)
  *
  * @stellar/stellar-sdk v15: Protocol 22 native, rpc.assembleTransaction, rpc.Api
  */
@@ -15,10 +15,10 @@ import type { Player, LoanRecord } from './types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const LOAN_DURATION_LEDGERS = 518_400; // ~30 days — mirrors contract constant
-export const CONTRACT_ID = 'CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA';
+export const CONTRACT_ID = 'CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED';
 export const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
 export const RPC_URL = 'https://soroban-testnet.stellar.org';
-export const ADMIN_ADDRESS = 'GBRG6SU7PTXT2Z6TQFTIRSF5PQ5SL2GSLSOD6YGWJHQFNE237KKFXDNW';
+export const ADMIN_ADDRESS = 'GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP';
 
 // 1 XLM = 10,000,000 stroops (i128)
 export function xlmToStroops(xlm: number): bigint {

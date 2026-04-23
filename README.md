@@ -6,8 +6,28 @@
 ![Static Badge](https://img.shields.io/badge/Frontend-React_Vite-61DAFB?style=for-the-badge&logo=react)
 ![Static Badge](https://img.shields.io/badge/Intelligence-Gemini_AI-4285F4?style=for-the-badge&logo=googlegemini)
 ![Static Badge](https://img.shields.io/badge/Network-Testnet-green?style=for-the-badge)
-![Static Badge](https://img.shields.io/badge/Wallets-Freighter_%7C_Albedo_%7C_xBull_%7C_Ledger-blueviolet?style=for-the-badge)
+![Static Badge](https://img.shields.io/badge/Wallets-Freighter_%7C_Albedo_%7C_xBull_%7C_HOT_Wallet-blueviolet?style=for-the-badge)
+![Static Badge](https://img.shields.io/badge/Live_Demo-Vercel-black?style=for-the-badge&logo=vercel)
 ![Static Badge](https://img.shields.io/badge/DeFi-Collateral_Loans-orange?style=for-the-badge)
+
+---
+
+## 🎬 Demo Video
+
+> **📽️ [Watch the 1-Minute Demo →](#)** *(replace `#` with your video URL after uploading)*
+>
+> *No voiceover — all functionality is shown via on-screen text captions. Covers: wallet connection, handle registration, marketplace bidding, instant buyout, collateral loans, Nova AI advisor, and on-chain verification.*
+
+| Feature Coverage | Timestamp |
+| :--- | :--- |
+| Wallet Connection & Identity Verification | 0:07 |
+| Handle Registration (On-Chain IGN) | 0:15 |
+| Marketplace — Live Talent Grid | 0:22 |
+| Bargain Bidding & Escrow | 0:27 |
+| Instant Buyout & Ownership Transfer | 0:32 |
+| Collateral Loan (Borrow Against Player) | 0:38 |
+| Nova AI Market Intelligence | 0:46 |
+| Stellar Explorer — On-Chain Proof | 0:52 |
 
 ---
 
@@ -33,7 +53,7 @@ ScoutGrid leverages the **Stellar (Soroban)** blockchain to create a high-perfor
 - **Win-Point (WP) System**: On-chain reputation tracking that increases based on verified tournament performance.
 - **Nova AI Advisor**: Interrogate a high-performance AI that knows every contract on the grid to find undervalued talent.
 - **Minting Terminal**: Agency tools to deploy new pro-profiles directly to the network.
-- **Multi-Wallet Support**: Any scout can connect via Freighter, Albedo, xBull, or Ledger hardware wallet to bid, buy, or sell — wallet-agnostic by design.
+- **Multi-Wallet Support**: Any scout can connect via Freighter, Albedo, xBull, or HOT Wallet to bid, buy, or sell — wallet-agnostic by design.
 - **Collateral Loan System**: Lock a player contract to borrow XLM from the on-chain pool. WP-tiered loan-to-value ratios. Compound interest. Liquidation-on-expiry with community repo auction.
 
 ---
@@ -88,7 +108,7 @@ Browser (React + Vite)
  |   |-- FreighterModule      (Browser extension — Stellar.org)
  |   |-- AlbedoModule         (Web-based signer)
  |   |-- xBullModule          (Mobile-first wallet)
- |   └── LedgerModule         (Hardware wallet — Ledger device)
+ |   └── HotWalletModule      (NEAR-connected multi-chain wallet)
  |-- @stellar/stellar-sdk     (Transaction building & RPC interaction)
  |-- Universal Sync Engine    (On-chain state management via Zustand)
  |-- Gemini AI SDK            (Intelligence layer & Tactical analysis)
@@ -111,7 +131,7 @@ Stellar Testnet
 ### Implementation Details:
 - **Frontend**: React 19, Vite, TypeScript, Tailwind CSS (Cyberpunk/Glassmorphism UI).
 - **Smart Contracts**: Soroban (Rust SDK) deployed on Stellar Testnet.
-- **Wallet Integration**: `@creit.tech/stellar-wallets-kit` — unified multi-wallet layer supporting Freighter, Albedo, xBull, and Ledger hardware wallets. Any wallet can bid, buy, sell, or borrow.
+- **Wallet Integration**: `@creit.tech/stellar-wallets-kit` — unified multi-wallet layer supporting Freighter, Albedo, xBull, and HOT Wallet. Any wallet can bid, buy, sell, or borrow.
 - **AI Layer**: Google Gemini 1.5 Flash for market analysis and natural language queries.
 - **State Management**: Zustand for high-performance, real-time marketplace and loan state syncing.
 - **Transaction Notifications**: Custom Toast system delivering live feedback at every stage — simulate, approve, submit, confirm, or failure.
@@ -157,9 +177,15 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 
 | Layer | Environment | Address |
 | :--- | :--- | :--- |
-| **Marketplace Contract** | Stellar Testnet | `CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA` |
-| **Admin/Factory Account** | Stellar Testnet | `GBRG6SU7PTXT2Z6TQFTIRSF5PQ5SL2GSLSOD6YGWJHQFNE237KKFXDNW` |
+| **Marketplace Contract** | Stellar Testnet | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
+| **Admin/Factory Account** | Stellar Testnet | `GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP` |
 | **Native Asset (XLM)** | Stellar Testnet | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+### 🌐 Live Demo & Video
+
+> **Deployed on Vercel**: [scout-grid.vercel.app](https://scout-grid.vercel.app/)
+>
+> **Demo Video**: [Watch on YouTube / Loom](#) *(replace `#` with your video link — no voiceover, text captions only)*
 
 ### 🌐 On-Chain Explorer Verification
 All contract logic, scout identities, and roster transfers are publicly verifiable on the Stellar ledger.
@@ -216,7 +242,7 @@ ScoutGrid provides a robust set of **21 on-chain functions** categorized into Ma
   - [Freighter](https://freighter.app/) — browser extension by Stellar.org *(recommended for development)*
   - [Albedo](https://albedo.link/) — web-based, no install required
   - [xBull](https://xbull.app/) — mobile-first Stellar wallet
-  - [Ledger](https://www.ledger.com/) — hardware wallet (Ledger Nano S/X with Stellar app installed)
+  - [HOT Wallet](https://hot-labs.org/) — NEAR-connected multi-chain wallet *(demo mode: bypasses testnet gas for registration)*
 - **Testnet XLM**: Obtain from the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#account-creator?network=testnet).
 
 ---
@@ -427,9 +453,9 @@ The following screenshots show the same marketplace actions — bid, buyout, and
 | Place Bid | Freighter | ![Bid TX — Freighter](./frontend/ui_images/TX_Bid_Freighter.png) |
 | Instant Buyout | Albedo | ![Buyout TX — Albedo](./frontend/ui_images/TX_Buyout_Albedo.png) |
 | Accept Bid (Sell) | xBull | ![Sell TX — xBull](./frontend/ui_images/TX_Sell_xBull.png) |
-| Instant Buyout | Ledger | ![Buyout TX — Ledger](./frontend/ui_images/TX_Buyout_Ledger.png) |
+| Identity Verified | HOT Wallet | *(Demo mode — identity verified via wallet connection; on-chain registration requires funded testnet account)* |
 
-> All transactions above are publicly verifiable at [stellar.expert](https://stellar.expert/explorer/testnet) using the contract address `CCCZGX5JMOURFHKDYUOJ7EXWTZV6VHYPZQWXJDEBOAEBRTJHIG3PC6EA`.
+> All transactions above are publicly verifiable at [stellar.expert](https://stellar.expert/explorer/testnet) using the contract address `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED`.
 
 ---
 

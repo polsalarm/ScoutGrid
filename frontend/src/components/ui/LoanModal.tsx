@@ -37,7 +37,8 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
   const repayPreview = amount > 0 ? amount + Math.floor(amount * 500 / 10_000) : 0;
 
   useEffect(() => {
-    getPoolBalance().then(setPoolBalance);
+    // DEMO REMOVE — show 50,000 XLM pool balance when on-chain pool is empty
+    getPoolBalance().then(bal => setPoolBalance(bal > 0 ? bal : 50000));
   }, []);
 
   const handleLoan = async () => {
@@ -54,7 +55,7 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
         borrower: walletAddress,
         principal: amount,
         startLedger: 0,
-        dueLedger: 0,
+        dueLedger: 518400,
       });
       showToast('success', 'Loan Secured', `${amount.toLocaleString()} XLM borrowed against ${player.name}.`);
       onSuccess();

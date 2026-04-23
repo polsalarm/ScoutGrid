@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trophy, ShoppingBag, Zap, Shield, RefreshCw, Cpu, Clock, ShieldCheck, ExternalLink, Landmark } from 'lucide-react';
 import { useScoutStore } from '../lib/store';
 import { syncFullRegistry, acceptBid, getActiveLoan } from '../lib/contract';
+import { getDemoPlayers } from '../lib/demoData'; // DEMO REMOVE
 import { showToast } from '../components/ui/Toast';
 import type { Player, LoanRecord } from '../lib/types';
 import { LoanBadge } from '../components/ui/LoanBadge';
@@ -209,8 +210,11 @@ export function MyRoster() {
     });
   }, [players, walletAddress, setLoan]);
 
-  const ownedPlayers = players.filter(p => p.owner === walletAddress);
-  const biddedPlayers = players.filter(p =>
+  // DEMO REMOVE — merge demo-owned players into roster view
+  const realAddresses = new Set(players.map(p => p.address));
+  const allPlayers = [...players, ...getDemoPlayers(walletAddress, realAddresses)];
+  const ownedPlayers = allPlayers.filter(p => p.owner === walletAddress);
+  const biddedPlayers = allPlayers.filter(p =>
     p.currentBidder === walletAddress && p.owner !== walletAddress
   );
 

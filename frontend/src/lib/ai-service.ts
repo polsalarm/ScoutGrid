@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { Player } from './types';
 
 // User provided API Key for Gemini Free Tier
-const API_KEY = 'AIzaSyBfOYcXm1zti_LCRk96p_VoXH5b3fPF2pQ';
+const API_KEY = 'AIzaSyB37Nn_VNYJlE-dE-HN1HvWUU5R-vzkCQ0';
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const SYSTEM_PROMPT = `
@@ -23,7 +23,7 @@ GUIDELINES:
 
 export async function askNova(query: string, marketState: Player[]): Promise<string> {
     try {
-        const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Build the context string
         const marketSummary = marketState.map(p => ({
@@ -39,8 +39,7 @@ export async function askNova(query: string, marketState: Player[]): Promise<str
         const prompt = `${SYSTEM_PROMPT}\n${JSON.stringify(marketSummary)}\n\nCLIENT QUERY: ${query}`;
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
+        return result.response.text();
     } catch (err) {
         console.error('[Nova AI] Error:', err);
         return "System glitch. The grid is dark. I can't reach the intelligence layer right now. (Check your API key or connection)";
