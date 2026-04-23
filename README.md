@@ -497,6 +497,8 @@ ScoutGrid tracks on-chain verified milestones, ensuring every player's professio
 ### 🛰️ Nova Intelligence Command Center
 Interrogate our high-performance AI advisor to uncover market trends and find undervalued talent.
 
+> ⚠️ **Note on Nova AI availability:** Nova is powered by the **Google Gemini API (Free Tier)**. The live instance may return a quota error if the daily free-tier limit has been reached. This is an API key limitation, not a code issue — the integration is fully functional and demonstrated in the demo video. To run Nova locally, replace the `API_KEY` in `frontend/src/lib/ai-service.ts` with your own key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free).
+
 | 🛰️ UI Overview | 🔍 Scanning | 📡 Strategic Dossier ALPHA | 📡 Strategic Dossier BETA |
 | :---: | :---: | :---: | :---: |
 | ![Nova Chatbot](./frontend/ui_images/Nova_chatbot.png) | ![Scanning](./frontend/ui_images/ChatbotScanning.png) | ![Output 1](./frontend/ui_images/ChatbotOutput1.png) | ![Output 2](./frontend/ui_images/ChatbotOutput2.png) |
