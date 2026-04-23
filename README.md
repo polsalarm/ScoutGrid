@@ -456,7 +456,7 @@ The following screenshots show the same marketplace actions — bid, buyout, and
 | Accept Bid (Sell) | xBull | ![Sell TX — xBull](./frontend/ui_images/TX_Sell_xBull.png) |
 | Identity Verified | HOT Wallet | *(Demo mode — identity verified via wallet connection; on-chain registration requires funded testnet account)* |
 
-> All transactions above are publicly verifiable at [stellar.expert](https://stellar.expert/explorer/testnet) using the contract address `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED`.
+> All transactions above are publicly verifiable at [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED) using the contract address `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED`.
 
 ---
 
