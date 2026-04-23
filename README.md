@@ -564,6 +564,62 @@ A player's reputation directly determines borrowing power. Better players unlock
 
 ---
 
+## ✅ Technical Requirements
+
+### 🔗 Inter-Contract Call
+ScoutGrid's marketplace contract directly invokes the **Native XLM Stellar Asset Contract (SAC)** on every pool funding, loan disbursement, and repayment — this is a live Soroban inter-contract call executed on Testnet.
+
+| Detail | Value |
+| :--- | :--- |
+| **Calling Contract** | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
+| **Called Contract (XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| **Function Called** | `transfer(from, to, amount)` |
+| **Example Transaction** | [`07ad4f59...fdfdf697`](https://stellar.expert/explorer/testnet/tx/07ad4f59edc8b6d4a9ce1eb513c0c25b08f12bae77aa2a0d21a7be63fdfdf697) |
+| **Trigger** | `fund_pool`, `take_loan`, `repay_loan` |
+
+The inter-contract call flow:
+```
+Scout Browser
+  → ScoutGrid Contract (CCB3PY3...)
+      → XLM SAC (CDLZFC3...) :: transfer()
+          → XLM moves between scout wallet ↔ pool
+```
+
+---
+
+### 🏦 On-Chain Lending Pool
+ScoutGrid deploys a live community lending pool on Stellar Testnet. XLM is deposited into and disbursed from the pool entirely via on-chain smart contract logic — no off-chain custody.
+
+| Detail | Value |
+| :--- | :--- |
+| **Pool Contract** | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
+| **Settlement Token** | Native XLM |
+| **Token Contract (SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| **Funded Balance** | 5,000 XLM |
+| **Pool Fund TX** | [`07ad4f59...fdfdf697`](https://stellar.expert/explorer/testnet/tx/07ad4f59edc8b6d4a9ce1eb513c0c25b08f12bae77aa2a0d21a7be63fdfdf697) |
+
+---
+
+### 🚀 CI/CD Pipeline
+> 📸 **Screenshot needed** — take a screenshot of the passing GitHub Actions run and save as `frontend/ui_images/CICD_Pass.png`
+
+![CI](https://github.com/polsalarm/ScoutGrid/actions/workflows/ci.yml/badge.svg)
+
+| CI/CD Pipeline — Passing |
+| :---: |
+| ![CI/CD Pass](./frontend/ui_images/CICD_Pass.png) |
+
+---
+
+### 📱 Mobile Responsive
+> 📸 **Screenshots needed** — open Chrome DevTools → toggle device toolbar → set to 390×844 (iPhone 14) → take screenshots and save as below
+
+| Marketplace (Mobile) | My Roster (Mobile) |
+| :---: | :---: |
+| ![Mobile Marketplace](./frontend/ui_images/Mobile_Marketplace.png) | ![Mobile_Roster](./frontend/ui_images/Mobile_Roster.png) |
+
+---
+
 ## 🔮 Future Roadmap
 - **[ ] Player Dashboard**: A dedicated view for players to verify their own stats and upload achievements.
 - **[ ] DAO Governance**: Allow top scouts (highest WP) to vote on tournament verification and WP multipliers.
