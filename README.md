@@ -495,9 +495,26 @@ ScoutGrid uses **GitHub Actions** for automated quality gates on every push and 
 
 ---
 
-### 📱 Mobile Responsive
+### 📱 Mobile Responsive & PWA
 
 ScoutGrid is fully responsive and tested on **iPhone 14 Pro Max (430 × 932px)**. All pages reflow to a single-column layout, the navbar collapses with a compact icon-only wallet button, modals become full-height bottom sheets, and the Nova AI panel slides up from the bottom edge of the screen.
+
+#### 📲 Install as an App (PWA)
+
+ScoutGrid is a **Progressive Web App** — you can install it directly to your home screen without an App Store.
+
+**On iPhone / iPad (Safari):**
+1. Open the live site in **Safari**
+2. Tap the **Share** button (box with arrow)
+3. Scroll down and tap **"Add to Home Screen"**
+4. Tap **Add** — ScoutGrid appears as a native-looking app icon
+
+**On Android (Chrome):**
+1. Open the live site in **Chrome**
+2. Tap the **three-dot menu** → **"Add to Home Screen"** (or look for the install banner)
+3. Tap **Install**
+
+> Once installed, ScoutGrid launches in standalone mode (no browser chrome), caches the app shell for fast load, and stays up-to-date automatically in the background.
 
 | Feature | Mobile Behavior |
 | :--- | :--- |
@@ -506,6 +523,7 @@ ScoutGrid is fully responsive and tested on **iPhone 14 Pro Max (430 × 932px)**
 | **Mint Modal** | Full scrollable form; no content clipped |
 | **Nova AI** | Slides up as a full-width bottom sheet (65% viewport height) |
 | **Modals** | Centered with safe-area padding; scrollable on short viewports |
+| **PWA** | Installable, standalone display, offline app shell, auto-updates |
 
 | Marketplace | Mint Player | Achievements |
 | :---: | :---: | :---: |
