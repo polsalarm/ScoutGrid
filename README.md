@@ -426,6 +426,97 @@ Test the grid directly from your terminal using the **Stellar CLI**.
 
 ---
 
+## ✅ Technical Requirements
+
+### 🔗 Inter-Contract Call
+
+ScoutGrid's `take_loan` function invokes the **XLM Stellar Asset Contract (SAC)** to transfer funds directly from the on-chain lending pool to the borrower — a true cross-contract call on the Soroban VM.
+
+| Field | Value |
+| :--- | :--- |
+| **Caller Contract** | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
+| **Called Contract (XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| **Function Invoked** | `transfer(from, to, amount)` |
+| **Network** | Stellar Testnet |
+
+**Call Flow:**
+```
+Browser → ScoutGrid Contract (take_loan)
+           └─→ XLM SAC (transfer: pool → borrower)
+                └─→ Ledger state updated atomically
+```
+
+> The pool balance and loan state are stored in the ScoutGrid contract; the actual XLM movement is executed by the SAC via `transfer()`. This satisfies the inter-contract call requirement with real on-chain state changes.
+
+---
+
+### 🏦 On-Chain Lending Pool
+
+ScoutGrid features a native XLM lending pool with player-collateralized loans. Players listed on the marketplace can be used as collateral to borrow XLM directly from the pool.
+
+| Feature | Detail |
+| :--- | :--- |
+| **Pool Contract** | Same as ScoutGrid contract (embedded pool logic) |
+| **Collateral** | Registered player NFTs (on-chain) |
+| **Loan Currency** | XLM (native Stellar asset) |
+| **Repayment** | Full principal + 5% fee |
+| **Pool Funded With** | 5,000 XLM (testnet) via `fund_pool` |
+
+**3-Step Loan Flow:**
+
+| 1. Select Collateral & Amount | 2. Sign Transaction | 3. Loan Confirmed |
+| :---: | :---: | :---: |
+| ![Loan Modal](./frontend/ui_images/LoanModal.png) | ![Loan Transaction](./frontend/ui_images/LoanTransaction.png) | ![Loan Success](./frontend/ui_images/LoanSuccess.png) |
+
+**3-Step Repay Flow:**
+
+| 1. View Active Loan | 2. Sign Repayment | 3. Repayment Confirmed |
+| :---: | :---: | :---: |
+| ![Repay Modal](./frontend/ui_images/RepayModal.png) | ![Repay Transaction](./frontend/ui_images/RepayTransaction.png) | ![Repay Success](./frontend/ui_images/RepaySuccess.png) |
+
+---
+
+### 🚀 CI/CD Pipeline
+
+ScoutGrid uses **GitHub Actions** for automated quality gates on every push and pull request to `main`.
+
+![CI Badge](https://github.com/polsalarm/ScoutGrid/actions/workflows/ci.yml/badge.svg)
+
+| Job | Steps | Trigger |
+| :--- | :--- | :--- |
+| **Frontend** | `npm ci` → `tsc --noEmit` → `npm run build` | Push / PR to `main` |
+| **Contract** | `cargo test` (wasm32 target) | Push / PR to `main` |
+
+> The contract job uses `dtolnay/rust-toolchain@stable` with the `wasm32-unknown-unknown` target to ensure the Soroban contract compiles and all unit tests pass before any merge.
+
+| CI Pipeline Screenshot |
+| :---: |
+| ![CI Pipeline](./frontend/ui_images/CI_Pipeline.png) |
+
+---
+
+### 📱 Mobile Responsive
+
+ScoutGrid is fully responsive and tested on **iPhone 14 Pro Max (430 × 932px)**. All pages reflow to a single-column layout, the navbar collapses with a compact icon-only wallet button, modals become full-height bottom sheets, and the Nova AI panel slides up from the bottom edge of the screen.
+
+| Feature | Mobile Behavior |
+| :--- | :--- |
+| **Navbar** | Logo + icon-only Connect Wallet; nav links move to a sub-row below the bar |
+| **Player Cards** | Single-column grid; full-width cards with touch-friendly tap targets |
+| **Mint Modal** | Full scrollable form; no content clipped |
+| **Nova AI** | Slides up as a full-width bottom sheet (65% viewport height) |
+| **Modals** | Centered with safe-area padding; scrollable on short viewports |
+
+| Marketplace | Mint Player | Achievements |
+| :---: | :---: | :---: |
+| ![Mobile Marketplace](./frontend/ui_images/Mobile_Marketplace.png) | ![Mobile Mint](./frontend/ui_images/Mobile_Mint.png) | ![Mobile Achievements](./frontend/ui_images/Mobile_Achievements.png) |
+
+| My Roster | Nova AI |
+| :---: | :---: |
+| ![Mobile Roster](./frontend/ui_images/Mobile_Roster.png) | ![Mobile Nova](./frontend/ui_images/Mobile_Nova.png) |
+
+---
+
 ## 🚀 Live Interface Walkthrough
 
 ### 🔐 Multi-Wallet Connection
@@ -561,62 +652,6 @@ A player's reputation directly determines borrowing power. Better players unlock
 - **Multi-Wallet Abstraction**: Replacing hard-coded Freighter calls with a wallet-agnostic layer required migrating all transaction signing through `StellarWalletsKit` and resolving Protocol 22 XDR incompatibilities introduced by the `@stellar/stellar-sdk` v15 upgrade. Each wallet provider (browser extension, web-based, hardware) required its own connection and signing flow while the contract layer remained identical.
 - **Bargain Bid Mechanics**: The contract implements a reverse-price bidding model — scouts bid *below* the list price and the owner accepts the best offer. Enforcing this correctly required removing a directional bid guard (which incorrectly blocked valid lower bids from replacing higher ones) and ensuring `list_price` is updated to the accepted bid on transfer, so secondary-sale royalty logic always operates on the correct baseline.
 - **Collateral Loan Design**: Implementing compound interest in `no_std` Rust (no floating point) required integer math with per-term iteration — `repayment += repayment * 500 / 10_000` per term — which mirrors financial compound logic without precision loss. WP-tiered LTV required a match-based dispatch function callable both from contract logic and indirectly from the test suite. Differentiating "unlisted because sold" from "unlisted because collateralized" is handled by the existence of a `LoanRecord` key rather than a new profile field, keeping the schema clean.
-
----
-
-## ✅ Technical Requirements
-
-### 🔗 Inter-Contract Call
-ScoutGrid's marketplace contract directly invokes the **Native XLM Stellar Asset Contract (SAC)** on every pool funding, loan disbursement, and repayment — this is a live Soroban inter-contract call executed on Testnet.
-
-| Detail | Value |
-| :--- | :--- |
-| **Calling Contract** | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
-| **Called Contract (XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
-| **Function Called** | `transfer(from, to, amount)` |
-| **Example Transaction** | [`07ad4f59...fdfdf697`](https://stellar.expert/explorer/testnet/tx/07ad4f59edc8b6d4a9ce1eb513c0c25b08f12bae77aa2a0d21a7be63fdfdf697) |
-| **Trigger** | `fund_pool`, `take_loan`, `repay_loan` |
-
-The inter-contract call flow:
-```
-Scout Browser
-  → ScoutGrid Contract (CCB3PY3...)
-      → XLM SAC (CDLZFC3...) :: transfer()
-          → XLM moves between scout wallet ↔ pool
-```
-
----
-
-### 🏦 On-Chain Lending Pool
-ScoutGrid deploys a live community lending pool on Stellar Testnet. XLM is deposited into and disbursed from the pool entirely via on-chain smart contract logic — no off-chain custody.
-
-| Detail | Value |
-| :--- | :--- |
-| **Pool Contract** | `CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED` |
-| **Settlement Token** | Native XLM |
-| **Token Contract (SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
-| **Funded Balance** | 5,000 XLM |
-| **Pool Fund TX** | [`07ad4f59...fdfdf697`](https://stellar.expert/explorer/testnet/tx/07ad4f59edc8b6d4a9ce1eb513c0c25b08f12bae77aa2a0d21a7be63fdfdf697) |
-
----
-
-### 🚀 CI/CD Pipeline
-Automated GitHub Actions pipeline runs on every push to `main` — builds the frontend, type checks TypeScript, and runs all 10 Soroban contract tests.
-
-![CI](https://github.com/polsalarm/ScoutGrid/actions/workflows/ci.yml/badge.svg)
-
-| CI/CD Pipeline — Passing ✅ |
-| :---: |
-| ![CI/CD Pass](./frontend/ui_images/CICD_pass.png) |
-
----
-
-### 📱 Mobile Responsive
-> 📸 **Screenshots needed** — open Chrome DevTools → toggle device toolbar → set to 390×844 (iPhone 14) → take screenshots and save as below
-
-| Marketplace (Mobile) | My Roster (Mobile) |
-| :---: | :---: |
-| ![Mobile Marketplace](./frontend/ui_images/Mobile_Marketplace.png) | ![Mobile_Roster](./frontend/ui_images/Mobile_Roster.png) |
 
 ---
 
