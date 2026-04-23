@@ -527,9 +527,15 @@ A player's reputation directly determines borrowing power. Better players unlock
 
 > Interest compounds at **5% per 30-day term**. Unpaid loans can be liquidated — the contract transfers to admin for community repo auction with a protocol fee.
 
-| Loan Modal | Repay Modal |
-| :---: | :---: |
-| ![Loan Modal](./frontend/ui_images/LoanModal.png) | ![Repay Modal](./frontend/ui_images/RepayModal.png) |
+#### 🔒 Collateral Loan Flow
+| 1. Open Loan Modal | 2. Lock & Borrow (TX) | 3. Loan Badge — Collateral Locked |
+| :---: | :---: | :---: |
+| ![Loan Modal](./frontend/ui_images/LoanModal.png) | ![Loan Transaction](./frontend/ui_images/LoanTransaction.png) | ![Loan Badge](./frontend/ui_images/LoanBadge.png) |
+
+#### 🔓 Repayment Flow
+| 1. Open Repay Modal | 2. Repay Transaction | 3. Contract Unlocked & Re-listed |
+| :---: | :---: | :---: |
+| ![Repay Modal](./frontend/ui_images/RepayModal.png) | ![Repay Transaction](./frontend/ui_images/RepayTransaction.png) | ![Repay Success](./frontend/ui_images/RepaySuccess.png) |
 
 ---
 
