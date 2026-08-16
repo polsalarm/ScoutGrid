@@ -1,8 +1,8 @@
 export interface LoanRecord {
   borrower: string;
-  principal: number;   // in XLM
-  startLedger: number;
-  dueLedger: number;
+  principal: number;   // in AVAX
+  startTime: number;   // unix seconds
+  dueTime: number;     // unix seconds
 }
 
 export type Player = {

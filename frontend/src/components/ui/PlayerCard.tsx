@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Trophy, Clock, Cpu, Zap, ShieldCheck, Landmark } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
 import { buyout as contractBuyout, acceptBid as contractAcceptBid, syncGlobalMarket } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 import { showToast } from './Toast';
 import type { Player } from '../../lib/types';
 import { BidModal } from './BidModal';
@@ -120,11 +121,11 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
         <div className="flex flex-col">
           <span className="text-slate-500 text-[10px] uppercase tracking-widest">Buyout Price</span>
           {player.highestBid && (
-            <span className="text-electric/60 text-[9px] uppercase font-bold">Current Bid: {player.highestBid.toLocaleString()} XLM</span>
+            <span className="text-electric/60 text-[9px] uppercase font-bold">Current Bid: {player.highestBid.toLocaleString()} {TOKEN_SYMBOL}</span>
           )}
         </div>
         <span className="text-slate-100 font-bold text-xl">
-          {(player.price || 0).toLocaleString()} <span className="text-electric text-base">XLM</span>
+          {(player.price || 0).toLocaleString()} <span className="text-electric text-base">{TOKEN_SYMBOL}</span>
         </span>
       </div>
 
@@ -143,7 +144,7 @@ export function PlayerCard({ player, onViewAchievements }: PlayerCardProps) {
               disabled={isProcessing}
               className="w-full border border-green-500/60 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-slate-900 py-3 text-xs font-bold uppercase tracking-widest transition-all"
             >
-              {isProcessing ? 'Processing...' : `Accept Bid (${player.highestBid} XLM)`}
+              {isProcessing ? 'Processing...' : `Accept Bid (${player.highestBid} ${TOKEN_SYMBOL})`}
             </button>
           ) : (
             <div className="text-center border border-slate-800 bg-slate-800/20 text-slate-500 font-mono text-[10px] py-3 uppercase tracking-widest">

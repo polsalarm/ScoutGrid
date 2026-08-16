@@ -1,5 +1,6 @@
 import { ArrowLeft, Cpu, Trophy, Calendar, Star, Zap } from 'lucide-react';
 import type { Player } from '../lib/types';
+import { TOKEN_SYMBOL } from '../lib/chain';
 
 interface AchievementsProps {
   player: Player;
@@ -72,7 +73,7 @@ export function Achievements({ player, onBack }: AchievementsProps) {
           </div>
           <p className="text-slate-600 font-mono text-[10px] uppercase tracking-widest">Verified Win Points</p>
           <div className="text-electric font-mono font-bold text-xl mt-1">
-            {(player.price || 0).toLocaleString()} <span className="text-sm text-slate-400">XLM</span>
+            {(player.price || 0).toLocaleString()} <span className="text-sm text-slate-400">{TOKEN_SYMBOL}</span>
           </div>
         </div>
       </div>

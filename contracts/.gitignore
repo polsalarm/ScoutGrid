@@ -1,0 +1,10 @@
+# Foundry build artifacts
+cache/
+out/
+
+# Local Anvil devnet broadcast logs (chainId 31337) — not real deployments.
+# Real network broadcasts (e.g. Fuji, chainId 43113) should stay tracked.
+broadcast/*/31337/
+
+# Env files with private keys
+.env

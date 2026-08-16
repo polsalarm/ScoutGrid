@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Unlock, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
-import { repayPlayerLoan, getCurrentLedger, LOAN_DURATION_LEDGERS } from '../../lib/contract';
+import { repayPlayerLoan, getChainTime, LOAN_DURATION_SECONDS } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 import { showToast } from './Toast';
 import type { Player, LoanRecord } from '../../lib/types';
 
@@ -13,9 +14,9 @@ interface RepayModalProps {
   onSuccess: () => void;
 }
 
-function computeRepayment(loan: LoanRecord, currentLedger: number): number {
-  const elapsed = Math.max(0, currentLedger - loan.startLedger);
-  const terms = Math.max(1, Math.ceil(elapsed / LOAN_DURATION_LEDGERS));
+function computeRepayment(loan: LoanRecord, currentTime: number): number {
+  const elapsed = Math.max(0, currentTime - loan.startTime);
+  const terms = Math.max(1, Math.ceil(elapsed / LOAN_DURATION_SECONDS));
   let repay = loan.principal;
   for (let i = 0; i < terms; i++) {
     repay = repay + Math.floor(repay * 500 / 10_000);
@@ -23,30 +24,29 @@ function computeRepayment(loan: LoanRecord, currentLedger: number): number {
   return repay;
 }
 
-function formatDueDate(loan: LoanRecord, currentLedger: number): string {
-  const ledgersLeft = loan.dueLedger - currentLedger;
-  if (ledgersLeft <= 0) return 'OVERDUE';
-  const seconds = ledgersLeft * 5;
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
+function formatDueDate(loan: LoanRecord, currentTime: number): string {
+  const secondsLeft = loan.dueTime - currentTime;
+  if (secondsLeft <= 0) return 'OVERDUE';
+  const days = Math.floor(secondsLeft / 86400);
+  const hours = Math.floor((secondsLeft % 86400) / 3600);
   if (days > 0) return `${days}d ${hours}h remaining`;
   return `${hours}h remaining`;
 }
 
 export function RepayModal({ player, loan, onClose, onSuccess }: RepayModalProps) {
   const { walletAddress, setLoan } = useScoutStore();
-  const [currentLedger, setCurrentLedger] = useState(loan.startLedger);
+  const [currentTime, setCurrentTime] = useState(loan.startTime);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getCurrentLedger().then((l) => { if (l > 0) setCurrentLedger(l); });
+    getChainTime().then((t) => { if (t > 0) setCurrentTime(t); });
   }, []);
 
-  const isOverdue = currentLedger > loan.dueLedger;
-  const repayment = computeRepayment(loan, currentLedger);
+  const isOverdue = currentTime > loan.dueTime;
+  const repayment = computeRepayment(loan, currentTime);
   const interest = repayment - loan.principal;
-  const dueLabel = formatDueDate(loan, currentLedger);
+  const dueLabel = formatDueDate(loan, currentTime);
 
   const handleRepay = async () => {
     if (!walletAddress) return;
@@ -106,15 +106,15 @@ export function RepayModal({ player, loan, onClose, onSuccess }: RepayModalProps
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Principal borrowed</span>
-              <span className="text-white">{loan.principal.toLocaleString()} XLM</span>
+              <span className="text-white">{loan.principal.toLocaleString()} {TOKEN_SYMBOL}</span>
             </div>
             <div className="flex justify-between text-xs font-mono">
               <span className="text-slate-500">Interest accrued (5% compound)</span>
-              <span className="text-amber-400">+{interest.toLocaleString()} XLM</span>
+              <span className="text-amber-400">+{interest.toLocaleString()} {TOKEN_SYMBOL}</span>
             </div>
             <div className="border-t border-slate-800 pt-2 flex justify-between text-sm font-mono font-bold">
               <span className="text-slate-300">Total repayment</span>
-              <span className="text-white">{repayment.toLocaleString()} XLM</span>
+              <span className="text-white">{repayment.toLocaleString()} {TOKEN_SYMBOL}</span>
             </div>
           </div>
 
@@ -143,7 +143,7 @@ export function RepayModal({ player, loan, onClose, onSuccess }: RepayModalProps
                 : 'border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-900'
             }`}
           >
-            {isProcessing ? 'Processing Repayment…' : `Repay ${repayment.toLocaleString()} XLM & Unlock`}
+            {isProcessing ? 'Processing Repayment…' : `Repay ${repayment.toLocaleString()} ${TOKEN_SYMBOL} & Unlock`}
           </button>
         </div>
       </div>

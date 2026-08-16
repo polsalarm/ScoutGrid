@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Zap, X, Clock, AlertCircle, Wallet, CheckCircle2 } from 'lucide-react';
 import { placeBid as contractPlaceBid, buyout as contractBuyout, syncGlobalMarket } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 import { useScoutStore } from '../../lib/store';
 import { showToast } from './Toast';
 import type { Player } from '../../lib/types';
@@ -22,11 +23,11 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
     setError('');
     const num = parseInt(bidAmount);
     if (!num || num <= 0) {
-      setError('Enter a valid XLM amount.');
+      setError(`Enter a valid ${TOKEN_SYMBOL} amount.`);
       return;
     }
     if (num >= player.price) {
-      setError(`Bid must be lower than the buyout price of ${player.price} XLM.`);
+      setError(`Bid must be lower than the buyout price of ${player.price} ${TOKEN_SYMBOL}.`);
       return;
     }
 
@@ -34,7 +35,7 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
     try {
       await contractPlaceBid(walletAddress!, player.address, num);
       await syncGlobalMarket(setPlayers);
-      showToast('success', 'Bid Placed', `${num} XLM bid on ${player.name} confirmed.`);
+      showToast('success', 'Bid Placed', `${num} ${TOKEN_SYMBOL} bid on ${player.name} confirmed.`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -96,7 +97,7 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
           </div>
           <p className="text-slate-300 text-sm leading-relaxed">
             Bidding on <span className="font-bold text-slate-100">{player.name}</span>'s contract.
-            Buyout is <span className="font-bold text-slate-100">{(player.price || 0).toLocaleString()} XLM</span>.
+            Buyout is <span className="font-bold text-slate-100">{(player.price || 0).toLocaleString()} {TOKEN_SYMBOL}</span>.
           </p>
         </div>
 
@@ -116,20 +117,20 @@ export function BidModal({ player, onClose, onSuccess }: BidModalProps) {
           {/* Bid input */}
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 mb-2">
-              Your Bid (XLM)
+              Your Bid ({TOKEN_SYMBOL})
             </label>
             <input
               type="number"
               value={bidAmount}
               onChange={(e) => { setBidAmount(e.target.value); setError(''); }}
-              placeholder="Min: 1 XLM"
+              placeholder={`Min: 1 ${TOKEN_SYMBOL}`}
               autoFocus
               className="w-full bg-[#0F172A] border border-slate-600 focus:border-pink-500 text-slate-200 px-4 py-3 text-sm font-mono outline-none transition-colors"
             />
             <div className="mt-2 space-y-0.5">
               <p className="text-slate-500 font-mono text-[10px]">Must be lower than the buyout price.</p>
               <p className="text-slate-500 font-mono text-[10px]">
-                Bids below {(player.price || 0).toLocaleString()} XLM signal bargain intent.
+                Bids below {(player.price || 0).toLocaleString()} {TOKEN_SYMBOL} signal bargain intent.
               </p>
             </div>
           </div>

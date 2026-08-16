@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Lock, TrendingUp, AlertCircle } from 'lucide-react';
 import { useScoutStore } from '../../lib/store';
-import { takePlayerLoan, getPoolBalance } from '../../lib/contract';
+import { takePlayerLoan, getPoolBalance, LOAN_DURATION_SECONDS, getChainTime } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 import { showToast } from './Toast';
 import type { Player } from '../../lib/types';
 
@@ -37,27 +38,28 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
   const repayPreview = amount > 0 ? amount + Math.floor(amount * 500 / 10_000) : 0;
 
   useEffect(() => {
-    // DEMO REMOVE — show 50,000 XLM pool balance when on-chain pool is empty
+    // DEMO REMOVE — show 50,000 AVAX pool balance when on-chain pool is empty
     getPoolBalance().then(bal => setPoolBalance(bal > 0 ? bal : 50000));
   }, []);
 
   const handleLoan = async () => {
     if (!walletAddress || amount <= 0) return;
     if (amount > maxBorrow) {
-      setError(`Maximum borrowable is ${maxBorrow.toLocaleString()} XLM.`);
+      setError(`Maximum borrowable is ${maxBorrow.toLocaleString()} ${TOKEN_SYMBOL}.`);
       return;
     }
     setIsProcessing(true);
     setError('');
     try {
       await takePlayerLoan(walletAddress, player.address, amount);
+      const now = await getChainTime();
       setLoan(player.address, {
         borrower: walletAddress,
         principal: amount,
-        startLedger: 0,
-        dueLedger: 518400,
+        startTime: now || Math.floor(Date.now() / 1000),
+        dueTime: (now || Math.floor(Date.now() / 1000)) + LOAN_DURATION_SECONDS,
       });
-      showToast('success', 'Loan Secured', `${amount.toLocaleString()} XLM borrowed against ${player.name}.`);
+      showToast('success', 'Loan Secured', `${amount.toLocaleString()} ${TOKEN_SYMBOL} borrowed against ${player.name}.`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -87,7 +89,7 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
               <span>Collateral Loan</span>
             </div>
             <p className="text-slate-400 text-xs font-mono">
-              Lock <span className="text-white font-bold">{player.name}</span> as collateral to borrow XLM.
+              Lock <span className="text-white font-bold">{player.name}</span> as collateral to borrow {TOKEN_SYMBOL}.
             </p>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-200 transition-colors mt-0.5">
@@ -113,13 +115,13 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
             <div className="border border-slate-800 bg-slate-900/40 px-3 py-2.5">
               <div className="text-[9px] text-slate-500 uppercase font-mono tracking-widest mb-0.5">Pool Available</div>
               <div className="text-sm font-bold text-white font-mono">
-                {poolBalance !== null ? `${poolBalance.toLocaleString()} XLM` : '…'}
+                {poolBalance !== null ? `${poolBalance.toLocaleString()} ${TOKEN_SYMBOL}` : '…'}
               </div>
             </div>
             <div className="border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
               <div className="text-[9px] text-amber-500 uppercase font-mono tracking-widest mb-0.5">Max Borrow</div>
               <div className="text-sm font-bold text-amber-400 font-mono">
-                {maxBorrow.toLocaleString()} XLM
+                {maxBorrow.toLocaleString()} {TOKEN_SYMBOL}
               </div>
             </div>
           </div>
@@ -127,7 +129,7 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
           {/* Amount input */}
           <div>
             <label className="block text-[9px] text-slate-500 uppercase font-mono tracking-widest mb-1.5">
-              Borrow Amount (XLM)
+              Borrow Amount ({TOKEN_SYMBOL})
             </label>
             <input
               type="number"
@@ -156,7 +158,7 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
                 <span>Repayment (1 term, 5%)</span>
               </div>
               <span className="text-white font-bold font-mono text-sm">
-                {repayPreview.toLocaleString()} XLM
+                {repayPreview.toLocaleString()} {TOKEN_SYMBOL}
               </span>
             </div>
           )}
@@ -179,7 +181,7 @@ export function LoanModal({ player, onClose, onSuccess }: LoanModalProps) {
             disabled={isProcessing || amount <= 0 || amount > maxBorrow}
             className="w-full border border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-900 py-3 text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isProcessing ? 'Locking Collateral…' : `Lock & Borrow ${amount > 0 ? amount.toLocaleString() + ' XLM' : ''}`}
+            {isProcessing ? 'Locking Collateral…' : `Lock & Borrow ${amount > 0 ? amount.toLocaleString() + ' ' + TOKEN_SYMBOL : ''}`}
           </button>
         </div>
       </div>

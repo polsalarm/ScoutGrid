@@ -1,16 +1,16 @@
 import { Lock } from 'lucide-react';
 import type { LoanRecord } from '../../lib/types';
-import { LOAN_DURATION_LEDGERS } from '../../lib/contract';
+import { LOAN_DURATION_SECONDS } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 
 interface LoanBadgeProps {
   loan: LoanRecord;
-  currentLedger?: number;
+  currentTime?: number;
 }
 
-export function LoanBadge({ loan, currentLedger }: LoanBadgeProps) {
-  const ledgersLeft = currentLedger ? Math.max(0, loan.dueLedger - currentLedger) : null;
-  const secondsLeft = ledgersLeft !== null ? ledgersLeft * 5 : null;
-  const isOverdue = currentLedger ? currentLedger > loan.dueLedger : false;
+export function LoanBadge({ loan, currentTime }: LoanBadgeProps) {
+  const secondsLeft = currentTime ? Math.max(0, loan.dueTime - currentTime) : null;
+  const isOverdue = currentTime ? currentTime > loan.dueTime : false;
 
   const dueDateLabel = (() => {
     if (secondsLeft === null) return 'Loading…';
@@ -21,8 +21,8 @@ export function LoanBadge({ loan, currentLedger }: LoanBadgeProps) {
     return `${hours}h left`;
   })();
 
-  const termsElapsed = currentLedger
-    ? Math.max(1, Math.ceil((currentLedger - loan.startLedger) / LOAN_DURATION_LEDGERS))
+  const termsElapsed = currentTime
+    ? Math.max(1, Math.ceil((currentTime - loan.startTime) / LOAN_DURATION_SECONDS))
     : 1;
   let repayPreview = loan.principal;
   for (let i = 0; i < termsElapsed; i++) {
@@ -41,7 +41,7 @@ export function LoanBadge({ loan, currentLedger }: LoanBadgeProps) {
           {isOverdue ? 'Loan Overdue' : 'Collateral Locked'}
         </span>
         <span className="text-[9px] opacity-70">
-          Borrowed {loan.principal.toLocaleString()} XLM · Repay {repayPreview.toLocaleString()} XLM · {dueDateLabel}
+          Borrowed {loan.principal.toLocaleString()} {TOKEN_SYMBOL} · Repay {repayPreview.toLocaleString()} {TOKEN_SYMBOL} · {dueDateLabel}
         </span>
       </div>
     </div>

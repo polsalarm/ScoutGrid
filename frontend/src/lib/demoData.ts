@@ -2,11 +2,13 @@
 import type { Player } from './types';
 import { DEMO_CONFIG } from './demoConfig';
 
+const ADMIN_ADDRESS = '0x00000000000000000000000000000000a0000001';
+
 export const DEMO_PLAYERS: Player[] = [
   {
     id: 'demo-1',
     name: 'SKYLARK_01',
-    address: 'GDEMO1SKYLARK0000000000000000000000000000000000000000000001',
+    address: '0x000000000000000000000000000000000dec0de1',
     role: 'Jungler',
     bio: 'Top-tier jungle main. Known for aggressive early invades and vision control. 3x Regional Champion.',
     winPoints: 8,
@@ -17,12 +19,12 @@ export const DEMO_PLAYERS: Player[] = [
     stats: { kda: '4.8', winRate: '71%', matches: 312, tournamentsWon: 3, mvpAwards: 11, avgGoldMin: '487' },
     achievements: ['Regional Champion x3', 'MVP Spring Split 2024', 'Flawless Sweep Award'],
     isListed: true,
-    currentBidder: 'GBIDDER0000000000000000000000000000000000000000000000000001',
+    currentBidder: '0x000000000000000000000000000000000b1dde51',
   },
   {
     id: 'demo-2',
     name: 'NOVA_REAVER',
-    address: 'GDEMO2NOVAREAVER000000000000000000000000000000000000000000002',
+    address: '0x000000000000000000000000000000000dec0de2',
     role: 'Midlane',
     bio: 'Mechanical prodigy. 12 Win Points earned across international circuits. Highest rated mid in the grid.',
     winPoints: 12,
@@ -38,29 +40,29 @@ export const DEMO_PLAYERS: Player[] = [
   {
     id: 'demo-3',
     name: 'DUSK_PHANTOM',
-    address: 'GDEMO3DUSKPHANTOM00000000000000000000000000000000000000000003',
+    address: '0x000000000000000000000000000000000dec0de3',
     role: 'Support',
     bio: 'Vision architect. Specializes in protect compositions and late-game callouts. Undervalued by the market.',
     winPoints: 3,
     price: 1800,
     highestBid: 1500,
-    owner: 'GADMINSCOUTGRID000000000000000000000000000000000000000000001',
+    owner: ADMIN_ADDRESS,
     endTime: new Date(Date.now() + 86400000 * 1).toISOString(),
     stats: { kda: '3.1', winRate: '62%', matches: 198, tournamentsWon: 1, mvpAwards: 4, avgGoldMin: '301' },
     achievements: ['Best Support — Spring Cup', 'Zero Deaths Grand Final'],
     isListed: true,
-    currentBidder: 'GBIDDER0000000000000000000000000000000000000000000000000002',
+    currentBidder: '0x000000000000000000000000000000000b1dde52',
   },
   {
     id: 'demo-4',
     name: 'RIFT_VANCE',
-    address: 'GDEMO4RIFTVANCE0000000000000000000000000000000000000000000004',
+    address: '0x000000000000000000000000000000000dec0de4',
     role: 'Carry',
     bio: 'Rookie talent. Raw mechanics with exceptional carry potential. First season on the pro circuit.',
     winPoints: 0,
     price: 900,
     highestBid: undefined,
-    owner: 'GADMINSCOUTGRID000000000000000000000000000000000000000000001',
+    owner: ADMIN_ADDRESS,
     endTime: new Date(Date.now() + 86400000 * 7).toISOString(),
     stats: { kda: '2.9', winRate: '54%', matches: 87, tournamentsWon: 0, mvpAwards: 1, avgGoldMin: '412' },
     achievements: ['Rookie of the Split'],
@@ -70,18 +72,18 @@ export const DEMO_PLAYERS: Player[] = [
   {
     id: 'demo-5',
     name: 'OBSIDIAN_X',
-    address: 'GDEMO5OBSIDIANX000000000000000000000000000000000000000000005',
+    address: '0x000000000000000000000000000000000dec0de5',
     role: 'Roamer',
     bio: 'Tactical genius. Operates as a free roamer enabling global pressure. Trusted anchor for guild strats.',
     winPoints: 5,
     price: 3100,
     highestBid: 2700,
-    owner: 'GADMINSCOUTGRID000000000000000000000000000000000000000000001',
+    owner: ADMIN_ADDRESS,
     endTime: new Date(Date.now() + 86400000 * 2).toISOString(),
     stats: { kda: '4.1', winRate: '66%', matches: 267, tournamentsWon: 2, mvpAwards: 7, avgGoldMin: '358' },
     achievements: ['Best Roamer — Regional Series', 'Clutch Play of the Year 2023', 'Guild Anchor Award'],
     isListed: true,
-    currentBidder: 'GBIDDER0000000000000000000000000000000000000000000000000003',
+    currentBidder: '0x000000000000000000000000000000000b1dde53',
   },
 ];
 

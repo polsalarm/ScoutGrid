@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Target, Upload, Wallet, CheckCircle2 } from 'lucide-react';
+import { useAccount, useDisconnect } from 'wagmi';
 import { useScoutStore } from '../../lib/store';
-import { StellarWalletsKit } from '../../lib/walletKit';
 import { getProfile, getUsername } from '../../lib/contract';
+import { FAUCET_URL } from '../../lib/chain';
 import { RegisterModal } from '../ui/RegisterModal';
 import { MintModal } from '../ui/MintModal';
 import { WalletModal } from '../ui/WalletModal';
@@ -19,9 +20,12 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
     username, setUsername,
     isRegistered, setIsRegistered,
     isMinted, setIsMinted,
-    activeWalletId, setActiveWalletId,
+    setActiveWalletId,
     isWalletModalOpen, setIsWalletModalOpen,
   } = useScoutStore();
+
+  const { address: connectedAddress, connector } = useAccount();
+  const { disconnect } = useDisconnect();
 
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isMintOpen, setIsMintOpen] = useState(false);
@@ -29,20 +33,10 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
 
   const handleWalletSuccess = async (address: string) => {
     setWalletAddress(address);
-    setActiveWalletId(StellarWalletsKit.selectedModule?.productId ?? null);
+    setActiveWalletId(connector?.id ?? null);
     setError('');
 
-    // Check if the account is funded on testnet
-    const { isAccountFunded } = await import('../../lib/contract');
-    const funded = await isAccountFunded(address);
-    if (!funded) {
-      showToast(
-        'info',
-        'Account Not Funded',
-        `Fund this wallet via Stellar Friendbot before transacting. Visit: https://friendbot.stellar.org/?addr=${address}`,
-        8000
-      );
-    }
+    showToast('info', 'Need Test AVAX?', `Grab some from the Fuji faucet: ${FAUCET_URL}`, 6000);
 
     const existingIgn = await getUsername(address);
     if (existingIgn) {
@@ -51,28 +45,21 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
       const profile = await getProfile(address);
       if (profile) setIsMinted(true);
     } else {
-      if (funded) {
-        setIsRegisterOpen(true);
-      }
+      setIsRegisterOpen(true);
     }
   };
 
-  // Monitor for active wallet address changes (relevant for Freighter account switching)
+  // wagmi's useAccount is reactive to wallet-side account switches (e.g. the
+  // user changes accounts in MetaMask/Core) — no manual polling needed.
   useEffect(() => {
-    if (!walletAddress || !activeWalletId) return;
-    const checkAddress = async () => {
-      try {
-        const { address } = await StellarWalletsKit.getAddress();
-        if (address && address !== walletAddress) {
-          setWalletAddress(address);
-          setIsRegistered(false);
-          setIsMinted(false);
-          setUsername(null);
-        }
-      } catch {}
-    };
-    checkAddress();
-  }, [walletAddress, activeWalletId, setWalletAddress, setIsRegistered, setIsMinted, setUsername]);
+    if (!walletAddress || !connectedAddress) return;
+    if (connectedAddress !== walletAddress) {
+      setWalletAddress(connectedAddress);
+      setIsRegistered(false);
+      setIsMinted(false);
+      setUsername(null);
+    }
+  }, [connectedAddress, walletAddress, setWalletAddress, setIsRegistered, setIsMinted, setUsername]);
 
   useEffect(() => {
     if (walletAddress && !isRegistered) {
@@ -128,6 +115,7 @@ export function Navbar({ page, onNavigate }: NavbarProps) {
                 <div className="flex items-center space-x-1.5">
                   <div
                     onClick={() => {
+                      disconnect();
                       setWalletAddress(null); setIsRegistered(false); setIsMinted(false);
                       setUsername(null); setActiveWalletId(null);
                       showToast('info', 'Wallet Disconnected', 'Session cleared. Connect again to resume.');

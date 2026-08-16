@@ -1,218 +1,142 @@
 /**
- * ScoutGrid Soroban Contract Client
+ * ScoutGrid EVM Contract Client
  *
- * Contract:  CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED
- * Network:   Stellar Testnet
- * Admin:     GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP (scout key)
+ * Network:  Avalanche Fuji C-Chain (chainId 43113)
+ * Contract: see VITE_CONTRACT_ADDRESS / frontend/src/lib/chain.ts
  *
- * @stellar/stellar-sdk v15: Protocol 22 native, rpc.assembleTransaction, rpc.Api
+ * Built on viem + wagmi's framework-agnostic actions (`wagmi/actions`), so
+ * every function here is a plain async call — no React hooks required —
+ * matching the calling convention every component already uses.
  */
-
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { StellarWalletsKit } from './walletKit';
+import { isAddress, parseEther, formatEther, stringToHex, hexToString, zeroAddress, type Address } from 'viem';
+import {
+  readContract,
+  simulateContract,
+  writeContract,
+  waitForTransactionReceipt,
+  getAccount,
+  getBlock,
+  switchChain,
+} from 'wagmi/actions';
+import { wagmiConfig } from './walletKit';
+import { SCOUTGRID_ABI } from './abi';
+import { ACTIVE_CHAIN, CONTRACT_ADDRESS } from './chain';
 import { showToast } from '../components/ui/Toast';
 import type { Player, LoanRecord } from './types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-export const LOAN_DURATION_LEDGERS = 518_400; // ~30 days — mirrors contract constant
-export const CONTRACT_ID = 'CCB3PY3PW6HYPLTXYT2EYVXW7TXBFDE6ALH3MSSWSKI4IZYO67JGQQED';
-export const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
-export const RPC_URL = 'https://soroban-testnet.stellar.org';
-export const ADMIN_ADDRESS = 'GDGDODMJCR6VSSY5Y7TWAXM3SMOZK576QTCLZ6B5O2ISEJQ7JICBGZHP';
+export const LOAN_DURATION_SECONDS = 30 * 24 * 60 * 60; // mirrors contract's LOAN_DURATION (30 days)
 
-// 1 XLM = 10,000,000 stroops (i128)
-export function xlmToStroops(xlm: number): bigint {
-  return BigInt(Math.round(xlm * 10_000_000));
+// ─── ABI-adjacent helpers ─────────────────────────────────────────────────────
+function roleToBytes32(role: string): `0x${string}` {
+  return stringToHex(role, { size: 32 });
 }
-export function stroopsToXlm(stroops: bigint): number {
-  return Number(stroops) / 10_000_000;
-}
-/** Combines hi/lo parts of a Soroban i128 into a single BigInt */
-function parseI128(val: { lo(): any, hi(): any }): bigint {
-  const lo = BigInt(val.lo().toString());
-  const hi = BigInt(val.hi().toString());
-  return (hi << 64n) + lo;
+function bytes32ToRole(hex: `0x${string}`): string {
+  return hexToString(hex, { size: 32 }).replace(/\0+$/, '');
 }
 
-// ─── RPC Server (stellar-sdk v13 uses `rpc` namespace) ────────────────────────
-function getServer() {
-  return new StellarSdk.rpc.Server(RPC_URL, { allowHttp: false });
+function extractRevertReason(err: unknown): string {
+  const anyErr = err as { cause?: { data?: { errorName?: string } }; shortMessage?: string } | undefined;
+  if (anyErr?.cause?.data?.errorName) return anyErr.cause.data.errorName;
+  if (anyErr?.shortMessage) return anyErr.shortMessage;
+  return err instanceof Error ? err.message : 'Unknown error';
 }
 
-/** Check if a Stellar account exists (is funded) on the network */
-export async function isAccountFunded(address: string): Promise<boolean> {
-  try {
-    await getServer().getAccount(address);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ─── Helper: build → simulate → assemble → sign → submit → poll ──────────────
+// ─── Helper: ensure network → simulate → sign → submit → poll ────────────────
 async function invokeContract(
-  callerAddress: string,
   functionName: string,
-  args: StellarSdk.xdr.ScVal[]
-): Promise<void> {
-  const server = getServer();
-  const account = await server.getAccount(callerAddress);
-  const contract = new StellarSdk.Contract(CONTRACT_ID);
+  args: readonly unknown[],
+  value?: bigint
+): Promise<`0x${string}`> {
+  const { address: account, chainId } = getAccount(wagmiConfig);
+  if (!account) throw new Error('Wallet not connected.');
 
-  const tx = new StellarSdk.TransactionBuilder(account, {
-    fee: '100000',
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call(functionName, ...args))
-    .setTimeout(30)
-    .build();
-
-  // 1. Simulate
-  showToast('info', 'Simulating Transaction', `Preparing ${functionName}…`, 2500);
-  const simulation = await server.simulateTransaction(tx);
-  if (StellarSdk.rpc.Api.isSimulationError(simulation)) {
-    showToast('error', 'Simulation Failed', 'Contract may be uninitialized or the action is unauthorized.');
-    throw new Error(`Simulation failed: The contract may be uninitialized or the action is unauthorized.`);
+  if (chainId !== ACTIVE_CHAIN.id) {
+    showToast('info', 'Switching Network', `Approve the switch to ${ACTIVE_CHAIN.name} in your wallet.`, 8000);
+    try {
+      await switchChain(wagmiConfig, { chainId: ACTIVE_CHAIN.id });
+    } catch {
+      showToast('error', 'Wrong Network', `Switch your wallet to ${ACTIVE_CHAIN.name} and try again.`);
+      throw new Error('Wallet is on the wrong network.');
+    }
   }
 
-  // 2. Assemble with resource footprint
-  const preparedTx = StellarSdk.rpc.assembleTransaction(tx, simulation).build();
-
-  // 3. Sign via StellarWalletsKit
-  showToast('info', 'Approve in Wallet', 'Sign the transaction in your wallet to continue.', 12000);
-  let signedXdr: string;
+  showToast('info', 'Simulating Transaction', `Preparing ${functionName}…`, 2500);
+  let request;
   try {
-    const result = await StellarWalletsKit.signTransaction(preparedTx.toXDR(), {
-      networkPassphrase: NETWORK_PASSPHRASE,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sim = await simulateContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: functionName as never,
+      args: args as never,
+      account,
+      value,
     });
-    signedXdr = result.signedTxXdr;
+    request = sim.request;
+  } catch (err) {
+    const reason = extractRevertReason(err);
+    showToast('error', 'Simulation Failed', `Contract rejected this call: ${reason}`);
+    throw new Error(`Simulation failed: ${reason}`);
+  }
+
+  showToast('info', 'Approve in Wallet', 'Sign the transaction in your wallet to continue.', 12000);
+  let hash: `0x${string}`;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    hash = await writeContract(wagmiConfig, request as any);
   } catch {
     showToast('error', 'Transaction Rejected', 'You cancelled or rejected the wallet signature.');
     throw new Error('Transaction rejected in wallet.');
   }
 
-  // 4. Submit via RPC
-  const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-    signedXdr,
-    NETWORK_PASSPHRASE
-  ) as StellarSdk.Transaction;
+  showToast('info', 'Transaction Submitted', `Hash: ${hash.slice(0, 12)}…`, 4000);
 
-  const sendResponse = await server.sendTransaction(signedTx);
-  if (sendResponse.status === 'ERROR') {
-    const resultJson = JSON.stringify(sendResponse.errorResult ?? {});
-    const isBadAuth = resultJson.includes('txBadAuth');
-    const userMsg = isBadAuth
-      ? 'Signature rejected (txBadAuth). Your wallet may be set to Mainnet — switch it to Testnet and try again. Freighter: Settings → Network → Testnet.'
-      : 'Network rejected the transaction.';
-    showToast('error', 'Submission Failed', userMsg);
-    throw new Error(`Network rejected transaction: ${resultJson}`);
+  const receipt = await waitForTransactionReceipt(wagmiConfig, { hash });
+  if (receipt.status === 'reverted') {
+    showToast('error', 'Transaction Failed', 'The transaction was rejected on-chain.');
+    throw new Error('Transaction failed on-chain.');
   }
-
-  showToast('info', 'Transaction Submitted', `Hash: ${sendResponse.hash.slice(0, 12)}…`, 4000);
-
-  // 5. Poll until SUCCESS or FAILED
-  for (let i = 0; i < 20; i++) {
-    await new Promise(r => setTimeout(r, 1500));
-    const pollResponse = await server.getTransaction(sendResponse.hash);
-    if (pollResponse.status === StellarSdk.rpc.Api.GetTransactionStatus.SUCCESS) return;
-    if (pollResponse.status === StellarSdk.rpc.Api.GetTransactionStatus.FAILED) {
-      showToast('error', 'Transaction Failed', 'The transaction was rejected on-chain.');
-      throw new Error('Transaction failed on-chain.');
-    }
-  }
-  showToast('error', 'Transaction Timeout', 'No confirmation after 30 seconds. Check Stellar Explorer.');
-  throw new Error('Transaction timed out waiting for confirmation.');
+  return hash;
 }
 
-// ─── ScVal helpers (stellar-sdk v13 uses nativeToScVal) ──────────────────────
-function addrVal(addr: string): StellarSdk.xdr.ScVal {
-  return StellarSdk.Address.fromString(addr).toScVal();
-}
-function strVal(s: string): StellarSdk.xdr.ScVal {
-  return StellarSdk.nativeToScVal(s, { type: 'string' });
-}
-function i128Val(xlm: number): StellarSdk.xdr.ScVal {
-  return StellarSdk.nativeToScVal(xlmToStroops(xlm), { type: 'i128' });
-}
-function vecVal(arr: string[]): StellarSdk.xdr.ScVal {
-  return StellarSdk.nativeToScVal(arr.map(s => strVal(s)), { type: 'vec' });
+// ─── Contract Functions (writes) ───────────────────────────────────────────────
+
+/** registerUser — claim an IGN handle on-chain */
+export async function registerUser(_userAddress: string, username: string): Promise<void> {
+  await invokeContract('registerUser', [username]);
 }
 
-// ─── Contract Functions ───────────────────────────────────────────────────────
-
-/** register_user — verify account and set IGN on-chain */
-export async function registerUser(
-  userAddress: string,
-  username: string
-): Promise<void> {
-  await invokeContract(userAddress, 'register_user', [
-    addrVal(userAddress),
-    strVal(username),
-  ]);
-}
-
-/** mint_player_profile — list as a professional scoutable profile */
+/** mintPlayerProfile — list as a professional scoutable profile */
 export async function mintPlayerProfile(
-  playerAddress: string,
+  _playerAddress: string,
   role: string,
   bio: string,
   achievements: string[],
-  listPriceXlm: number
+  listPriceAvax: number
 ): Promise<void> {
-  await invokeContract(playerAddress, 'mint_player_profile', [
-    addrVal(playerAddress),
-    strVal(role),
-    strVal(bio),
-    vecVal(achievements),
-    i128Val(listPriceXlm),
-  ]);
+  await invokeContract('mintPlayerProfile', [roleToBytes32(role), bio, achievements, parseEther(String(listPriceAvax))]);
 }
 
-/** LEGACY: register_player */
-export async function registerPlayer(
-  playerAddress: string,
-  role: string,
-  listPriceXlm: number
-): Promise<void> {
-  await invokeContract(playerAddress, 'register_player', [
-    addrVal(playerAddress),
-    strVal(role),
-    i128Val(listPriceXlm),
-  ]);
-}
-
-/** place_bid — bargain bid; must be lower than the player's list price */
+/** placeBid — bargain bid; must be lower than the player's list price */
 export async function placeBid(
-  bidderAddress: string,
+  _bidderAddress: string,
   playerAddress: string,
-  bidAmountXlm: number
+  bidAmountAvax: number
 ): Promise<void> {
-  await invokeContract(bidderAddress, 'place_bid', [
-    addrVal(bidderAddress),
-    addrVal(playerAddress),
-    i128Val(bidAmountXlm),
-  ]);
+  await invokeContract('placeBid', [playerAddress as Address], parseEther(String(bidAmountAvax)));
 }
 
-/** accept_bid — current owner accepts the standing bid */
-export async function acceptBid(
-  ownerAddress: string,
-  playerAddress: string
-): Promise<void> {
-  await invokeContract(ownerAddress, 'accept_bid', [
-    addrVal(playerAddress),
-  ]);
+/** acceptBid — current owner accepts the standing bid */
+export async function acceptBid(_ownerAddress: string, playerAddress: string): Promise<void> {
+  await invokeContract('acceptBid', [playerAddress as Address]);
 }
 
 /** buyout — instantly secure a player's contract for the list price */
-export async function buyout(
-  buyerAddress: string,
-  playerAddress: string
-): Promise<void> {
-  await invokeContract(buyerAddress, 'buyout', [
-    addrVal(buyerAddress),
-    addrVal(playerAddress),
-  ]);
+export async function buyout(_buyerAddress: string, playerAddress: string): Promise<void> {
+  const profile = await getProfile(playerAddress);
+  if (!profile) throw new Error('Profile not found.');
+  await invokeContract('buyout', [playerAddress as Address], parseEther(String(profile.listPrice)));
 }
 
 // ─── Read-only helpers ────────────────────────────────────────────────────────
@@ -225,43 +149,34 @@ export interface OnChainProfile {
   winPoints: number;
   owner: string;
   originalCreator: string;
-  listPriceXlm: number;
+  listPrice: number;
 }
 
 /** getProfile — read a player's on-chain profile (no signature needed) */
 export async function getProfile(playerAddress: string): Promise<OnChainProfile | null> {
   try {
-    // Hardening: Prevent crash if address is invalid/mock
-    if (!playerAddress || !playerAddress.startsWith('G') || playerAddress.length !== 56) {
-      console.warn(`[Soroban] Skipping getProfile for invalid address: ${playerAddress}`);
+    if (!isAddress(playerAddress)) {
+      console.warn(`[EVM] Skipping getProfile for invalid address: ${playerAddress}`);
       return null;
     }
-
-    const retval = await simulateInvoke('get_profile', [addrVal(playerAddress)]);
-    if (!retval) return null;
-
-    const map = retval.map();
-    if (!map) return null;
-
-    const find = (key: string) => map.find((e: any) => {
-      try { return e.key().sym().toString() === key; } catch { return false; }
-    })?.val();
-
-    const username = find('username')?.str()?.toString() ?? '';
-    const role = find('role')?.str()?.toString() ?? '';
-    const bio = find('bio')?.str()?.toString() ?? '';
-    const achievements = find('achievements')?.vec()?.map((v: any) => v.str().toString()) ?? [];
-    const winPoints = find('win_points')?.u32() ?? 0;
-    const owner = StellarSdk.Address.fromScVal(find('owner')!).toString();
-    const originalCreator = StellarSdk.Address.fromScVal(find('original_creator')!).toString();
-    const rawPrice = find('list_price')?.i128();
-    const listPriceXlm = rawPrice
-      ? stroopsToXlm(parseI128(rawPrice))
-      : 0;
-
-    return { username, role, bio, achievements, winPoints, owner, originalCreator, listPriceXlm };
+    const profile = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getProfile',
+      args: [playerAddress as Address],
+    });
+    return {
+      username: profile.username,
+      role: bytes32ToRole(profile.role),
+      bio: profile.bio,
+      achievements: [...profile.achievements],
+      winPoints: profile.winPoints,
+      owner: profile.owner,
+      originalCreator: profile.originalCreator,
+      listPrice: Number(formatEther(profile.listPrice)),
+    };
   } catch (err) {
-    console.error(`[Soroban] getProfile failed for ${playerAddress}:`, err);
+    console.error(`[EVM] getProfile failed for ${playerAddress}:`, err);
     return null;
   }
 }
@@ -269,77 +184,93 @@ export async function getProfile(playerAddress: string): Promise<OnChainProfile 
 /** getUsername — read only registration IGN */
 export async function getUsername(userAddress: string): Promise<string | null> {
   try {
-    const retval = await simulateInvoke('get_username', [addrVal(userAddress)]);
-    if (!retval) return null;
-    return retval.str().toString();
+    return await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getUsername',
+      args: [userAddress as Address],
+    });
   } catch {
     return null;
   }
 }
 
-/** getCurrentBid — current standing bid amount for a player in XLM */
+/** getCurrentBid — current standing bid amount for a player in AVAX */
 export async function getCurrentBid(playerAddress: string): Promise<number> {
   try {
-    const retval = await simulateInvoke('get_current_bid', [addrVal(playerAddress)]);
-    if (!retval) return 0;
-    const stroops = retval.i128();
-    return stroopsToXlm(parseI128(stroops));
+    const bid = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getCurrentBid',
+      args: [playerAddress as Address],
+    });
+    return Number(formatEther(bid));
   } catch (err) {
-    console.warn(`[Soroban] Failed to get current bid for ${playerAddress}`, err);
+    console.warn(`[EVM] Failed to get current bid for ${playerAddress}`, err);
     return 0;
   }
 }
 
-/** get_all_player_addresses — retrieve the global registry */
+/** getAllPlayerAddresses — retrieve the global registry */
 export async function getAllPlayerAddresses(): Promise<string[]> {
   try {
-    const retval = await simulateInvoke('get_all_player_addresses', []);
-    if (!retval) return [];
-    return retval.vec()?.map((v: any) => StellarSdk.Address.fromScVal(v).toString()) ?? [];
+    const addrs = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getAllPlayerAddresses',
+    });
+    return [...addrs];
   } catch (err) {
-    console.error('[Soroban] Failed to fetch player registry:', err);
+    console.error('[EVM] Failed to fetch player registry:', err);
     return [];
   }
 }
 
+function marketItemToPlayer(item: {
+  player: Address;
+  profile: {
+    username: string;
+    role: `0x${string}`;
+    bio: string;
+    achievements: readonly string[];
+    winPoints: number;
+    owner: Address;
+    listPrice: bigint;
+    listed: boolean;
+  };
+  currentBid: bigint;
+  currentBidder: Address;
+}): Player {
+  const playerAddr = item.player;
+  const profile = item.profile;
+  return {
+    id: playerAddr.slice(0, 10),
+    name: profile.username || 'Scout',
+    role: bytes32ToRole(profile.role),
+    bio: profile.bio || '',
+    achievements: [...profile.achievements],
+    winPoints: Number(profile.winPoints || 0),
+    address: playerAddr,
+    owner: profile.owner,
+    price: Number(formatEther(profile.listPrice)),
+    highestBid: Number(formatEther(item.currentBid)),
+    currentBidder: item.currentBidder === zeroAddress ? null : item.currentBidder,
+    isListed: profile.listed,
+    endTime: '24:00',
+    stats: { kda: 'N/A', winRate: 'N/A', matches: 0, tournamentsWon: 0, mvpAwards: 0, avgGoldMin: 'N/A' },
+  };
+}
+
 /** syncGlobalMarket — Optimized Single-Call Sync */
-export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): Promise<void> {
+export async function syncGlobalMarket(setPlayersInStore: (p: Player[]) => void): Promise<void> {
   try {
     console.log('[Sync] Starting Optimized Global Sync...');
-    const retval = await simulateInvoke('get_all_market_items', []);
-    if (!retval) {
-      console.warn('[Sync] Registry is empty or simulation failed.');
-      return;
-    }
-
-    const native = StellarSdk.scValToNative(retval);
-    if (!Array.isArray(native)) return;
-
-    const players = native.map((item: any) => {
-      const playerAddr = item.player.toString();
-      const profile = item.profile;
-
-      const highestBidXlm = typeof item.current_bid === 'bigint' ? stroopsToXlm(item.current_bid) : 0;
-      const currentBidder = item.current_bidder ? item.current_bidder.toString() : null;
-
-      return {
-        id: playerAddr.slice(0, 10),
-        name: profile.username || 'Scout',
-        role: profile.role || 'N/A',
-        bio: profile.bio || '',
-        achievements: profile.achievements || [],
-        winPoints: Number(profile.win_points || 0),
-        address: playerAddr,
-        owner: profile.owner.toString(),
-        price: typeof profile.list_price === 'bigint' ? stroopsToXlm(profile.list_price) : 0,
-        highestBid: highestBidXlm,
-        currentBidder,
-        isListed: profile.listed,
-        endTime: '24:00',
-        stats: { kda: 'N/A', winRate: 'N/A', matches: 0, tournamentsWon: 0, mvpAwards: 0, avgGoldMin: 'N/A' }
-      };
+    const items = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getAllMarketItems',
     });
-
+    const players = items.map(marketItemToPlayer);
     setPlayersInStore(players);
     console.log(`[Sync] Market discovery complete! Sync'd ${players.length} players.`);
   } catch (err) {
@@ -347,30 +278,21 @@ export async function syncGlobalMarket(setPlayersInStore: (p: any[]) => void): P
   }
 }
 
-/** Helper for read-only simulations — returns the return value ScVal or null. */
-async function simulateInvoke(method: string, args: StellarSdk.xdr.ScVal[]): Promise<any> {
-  const server = getServer();
-  const contract = new StellarSdk.Contract(CONTRACT_ID);
-  const dummyAccount = new StellarSdk.Account(ADMIN_ADDRESS, '0');
-
-  const tx = new StellarSdk.TransactionBuilder(dummyAccount, {
-    fee: '100',
-    networkPassphrase: NETWORK_PASSPHRASE,
-  })
-    .addOperation(contract.call(method, ...args))
-    .setTimeout(10)
-    .build();
-
-  const sim = await server.simulateTransaction(tx);
-  if (StellarSdk.rpc.Api.isSimulationError(sim) || !sim.result) return null;
-  return sim.result.retval;
+/** Helper for read-only simulations of getOwnedAssets */
+async function getOwnedAssetsRaw(owner: string) {
+  return readContract(wagmiConfig, {
+    address: CONTRACT_ADDRESS,
+    abi: SCOUTGRID_ABI,
+    functionName: 'getOwnedAssets',
+    args: [owner as Address],
+  });
 }
 
-/** getCurrentLedger — latest confirmed ledger sequence number */
-export async function getCurrentLedger(): Promise<number> {
+/** getChainTime — latest confirmed block timestamp (unix seconds) */
+export async function getChainTime(): Promise<number> {
   try {
-    const info = await getServer().getLatestLedger();
-    return info.sequence;
+    const block = await getBlock(wagmiConfig, { chainId: ACTIVE_CHAIN.id });
+    return Number(block.timestamp);
   } catch {
     return 0;
   }
@@ -378,72 +300,81 @@ export async function getCurrentLedger(): Promise<number> {
 
 // ─── Loan Functions ───────────────────────────────────────────────────────────
 
-/** fundPool — admin deposits XLM into the lending pool */
-export async function fundPool(
-  funderAddress: string,
-  amountXlm: number
-): Promise<void> {
-  await invokeContract(funderAddress, 'fund_pool', [
-    addrVal(funderAddress),
-    i128Val(amountXlm),
-  ]);
+/** fundPool — admin (or any sponsor) deposits AVAX into the lending pool */
+export async function fundPool(_funderAddress: string, amountAvax: number): Promise<void> {
+  await invokeContract('fundPool', [], parseEther(String(amountAvax)));
 }
 
-/** takePlayerLoan — lock a player contract as collateral and borrow XLM */
+/** takePlayerLoan — lock a player contract as collateral and borrow AVAX */
 export async function takePlayerLoan(
-  borrowerAddress: string,
+  _borrowerAddress: string,
   playerAddress: string,
-  amountXlm: number
+  amountAvax: number
 ): Promise<void> {
-  await invokeContract(borrowerAddress, 'take_loan', [
-    addrVal(borrowerAddress),
-    addrVal(playerAddress),
-    i128Val(amountXlm),
-  ]);
+  await invokeContract('takeLoan', [playerAddress as Address, parseEther(String(amountAvax))]);
 }
 
 /** repayPlayerLoan — repay principal + compound interest to unlock collateral */
-export async function repayPlayerLoan(
-  borrowerAddress: string,
-  playerAddress: string
-): Promise<void> {
-  await invokeContract(borrowerAddress, 'repay_loan', [
-    addrVal(borrowerAddress),
-    addrVal(playerAddress),
-  ]);
+export async function repayPlayerLoan(_borrowerAddress: string, playerAddress: string): Promise<void> {
+  const [exists, loan] = await getLoanRaw(playerAddress);
+  if (!exists) throw new Error('No active loan for this player.');
+  // Small buffer over the latest known block time to absorb the delay
+  // between simulating here and the transaction actually mining — the
+  // contract refunds any excess, so overpaying by a few minutes is free.
+  const now = (await getChainTime()) + 300;
+  const repayment = computeRepaymentWei(loan.principal, Number(loan.startTime), now);
+  await invokeContract('repayLoan', [playerAddress as Address], repayment);
+}
+
+function computeRepaymentWei(principalWei: bigint, startTime: number, now: number): bigint {
+  const elapsed = Math.max(0, now - startTime);
+  const terms = Math.max(1, Math.ceil(elapsed / LOAN_DURATION_SECONDS));
+  let repayment = principalWei;
+  for (let i = 0; i < terms; i++) {
+    repayment += (repayment * 500n) / 10_000n;
+  }
+  return repayment;
 }
 
 /** liquidateLoan — callable by anyone after the loan term expires */
-export async function liquidateLoan(playerAddress: string, callerAddress: string): Promise<void> {
-  await invokeContract(callerAddress, 'liquidate', [
-    addrVal(playerAddress),
-  ]);
+export async function liquidateLoan(playerAddress: string, _callerAddress: string): Promise<void> {
+  await invokeContract('liquidate', [playerAddress as Address]);
+}
+
+async function getLoanRaw(playerAddress: string) {
+  return readContract(wagmiConfig, {
+    address: CONTRACT_ADDRESS,
+    abi: SCOUTGRID_ABI,
+    functionName: 'getLoan',
+    args: [playerAddress as Address],
+  });
 }
 
 /** getActiveLoan — read active loan for a player (null if none) */
 export async function getActiveLoan(playerAddress: string): Promise<LoanRecord | null> {
   try {
-    const retval = await simulateInvoke('get_loan', [addrVal(playerAddress)]);
-    if (!retval) return null;
-    const native = StellarSdk.scValToNative(retval);
-    if (!native || typeof native !== 'object') return null;
+    const [exists, loan] = await getLoanRaw(playerAddress);
+    if (!exists) return null;
     return {
-      borrower: native.borrower.toString(),
-      principal: stroopsToXlm(BigInt(native.principal)),
-      startLedger: Number(native.start_ledger),
-      dueLedger: Number(native.due_ledger),
+      borrower: loan.borrower,
+      principal: Number(formatEther(loan.principal)),
+      startTime: Number(loan.startTime),
+      dueTime: Number(loan.dueTime),
     };
   } catch {
     return null;
   }
 }
 
-/** getPoolBalance — current XLM available in the lending pool */
+/** getPoolBalance — current AVAX available in the lending pool */
 export async function getPoolBalance(): Promise<number> {
   try {
-    const retval = await simulateInvoke('get_pool_balance', []);
-    if (!retval) return 0;
-    return stroopsToXlm(parseI128(retval.i128()));
+    const pool = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getPoolBalance',
+    });
+    return Number(formatEther(pool));
   } catch {
     return 0;
   }
@@ -458,66 +389,26 @@ export async function syncFullRegistry(
   setPlayersInStore: (p: Player[]) => void
 ) {
   try {
-    // 1. Fetch Global Marketplace (Visible public items + Bids)
-    const marketRaw = await simulateInvoke('get_all_market_items', []);
+    const marketRaw = await readContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: SCOUTGRID_ABI,
+      functionName: 'getAllMarketItems',
+    });
+    const ownedRaw = await getOwnedAssetsRaw(walletAddress);
 
-    // 2. Fetch Owned Assets (only if account is funded on-chain)
-    let ownedRaw = null;
-    const funded = await isAccountFunded(walletAddress);
-    if (funded) {
-      ownedRaw = await simulateInvoke('get_owned_assets', [addrVal(walletAddress)]);
-    } else {
-      console.warn(`[Full Sync] Wallet ${walletAddress.slice(0, 8)}... is unfunded. Skipping owned-assets lookup.`);
-    }
-
-    const parseItems = (raw: any): Player[] => {
-      if (!raw) return [];
-      const native = StellarSdk.scValToNative(raw);
-      if (!Array.isArray(native)) return [];
-
-      return native.map((item: any) => {
-        const profile = item.profile;
-        const playerAddr = item.player.toString();
-
-        const parseAmount = (val: any) => typeof val === 'bigint' ? stroopsToXlm(val) : 0;
-
-        return {
-          id: playerAddr.slice(0, 10),
-          name: profile.username || 'Scout',
-          role: profile.role || 'N/A',
-          bio: profile.bio || '',
-          achievements: profile.achievements || [],
-          winPoints: Number(profile.win_points || 0),
-          address: playerAddr,
-          owner: profile.owner.toString(),
-          price: parseAmount(profile.list_price),
-          highestBid: parseAmount(item.current_bid),
-          currentBidder: item.current_bidder ? item.current_bidder.toString() : null,
-          isListed: profile.listed,
-          endTime: '24:00',
-          stats: { kda: 'N/A', winRate: 'N/A', matches: 0, tournamentsWon: 0, mvpAwards: 0, avgGoldMin: 'N/A' }
-        } as Player;
-      });
-    };
-
-    const mPlayers = parseItems(marketRaw);
-    const oPlayers = parseItems(ownedRaw);
+    const mPlayers = marketRaw.map(marketItemToPlayer);
+    const oPlayers = ownedRaw.map(marketItemToPlayer);
 
     // Merge: Store identity is unique per Address
     const registryMap = new Map<string, Player>();
 
-    // Fill with Personal Assets first (True ownership)
-    oPlayers.forEach(p => registryMap.set(p.address, p));
+    // Fill with Personal Assets first (true ownership)
+    oPlayers.forEach((p) => registryMap.set(p.address, p));
 
-    // Layer with Market Data (Market data might have updated bid info)
-    mPlayers.forEach(p => {
+    // Layer with Market Data (market data might have updated bid info)
+    mPlayers.forEach((p) => {
       const existing = registryMap.get(p.address);
-      if (existing) {
-        // Merge properties, keeping ownership from Personal for consistency
-        registryMap.set(p.address, { ...existing, ...p });
-      } else {
-        registryMap.set(p.address, p);
-      }
+      registryMap.set(p.address, existing ? { ...existing, ...p } : p);
     });
 
     const finalPlayers = Array.from(registryMap.values());

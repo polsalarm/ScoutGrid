@@ -8,6 +8,7 @@ import type { Player, LoanRecord } from '../lib/types';
 import { LoanBadge } from '../components/ui/LoanBadge';
 import { RepayModal } from '../components/ui/RepayModal';
 import { LoanModal } from '../components/ui/LoanModal';
+import { TOKEN_SYMBOL } from '../lib/chain';
 
 function RosterCard({ player, walletAddress, isOffer }: { player: Player; walletAddress: string | null; isOffer?: boolean }) {
   const { setPlayers, loans, setLoan } = useScoutStore();
@@ -106,14 +107,14 @@ function RosterCard({ player, walletAddress, isOffer }: { player: Player; wallet
               {isOffer ? 'Your Offer' : 'Current Value'}
             </div>
             <div className="text-white text-lg font-bold font-mono">
-              {(isOffer ? (player.highestBid ?? 0) : player.price || 0).toLocaleString()} <span className="text-xs text-slate-500">XLM</span>
+              {(isOffer ? (player.highestBid ?? 0) : player.price || 0).toLocaleString()} <span className="text-xs text-slate-500">{TOKEN_SYMBOL}</span>
             </div>
           </div>
           {!isOffer && hasBid && (
             <div className="text-right">
               <div className="text-[9px] text-electric uppercase font-mono tracking-widest mb-1 animate-pulse">Top Bid</div>
               <div className="text-electric text-lg font-bold font-mono">
-                {player.highestBid?.toLocaleString()} <span className="text-xs opacity-60">XLM</span>
+                {player.highestBid?.toLocaleString()} <span className="text-xs opacity-60">{TOKEN_SYMBOL}</span>
               </div>
             </div>
           )}

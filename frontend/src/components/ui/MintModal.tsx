@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, X, Zap, Trophy, Plus, Trash2, Info } from 'lucide-react';
 import { mintPlayerProfile } from '../../lib/contract';
+import { TOKEN_SYMBOL } from '../../lib/chain';
 import { useScoutStore } from '../../lib/store';
 import { showToast } from './Toast';
 import type { Player } from '../../lib/types';
@@ -131,7 +132,7 @@ export function MintModal({ onClose, onSuccess }: MintModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Market Asking Price (XLM)</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Market Asking Price ({TOKEN_SYMBOL})</label>
                 <div className="relative">
                   <input 
                     type="number"

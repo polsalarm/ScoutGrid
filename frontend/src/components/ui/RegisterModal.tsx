@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, X, Zap, AlertCircle } from 'lucide-react';
 import { registerUser, getUsername } from '../../lib/contract';
-import { HOTWALLET_ID } from '../../lib/walletKit';
 import { useScoutStore } from '../../lib/store';
 import { showToast } from './Toast';
 
@@ -12,12 +11,10 @@ interface RegisterModalProps {
 }
 
 export function RegisterModal({ onClose, onSuccess }: RegisterModalProps) {
-  const { walletAddress, activeWalletId, setIsRegistered, setUsername } = useScoutStore();
+  const { walletAddress, setIsRegistered, setUsername } = useScoutStore();
   const [ign, setIgn] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
-
-  const isHotWallet = activeWalletId === HOTWALLET_ID;
 
   const handleRegister = async () => {
     if (!ign) return;
@@ -26,12 +23,7 @@ export function RegisterModal({ onClose, onSuccess }: RegisterModalProps) {
     try {
       const existingIgn = await getUsername(walletAddress!);
       if (!existingIgn) {
-        if (isHotWallet) {
-          // HOT Wallet: skip on-chain tx — wallet connection already verified ownership
-          console.log('[Register] HOT Wallet demo mode — skipping on-chain registration.');
-        } else {
-          await registerUser(walletAddress!, ign);
-        }
+        await registerUser(walletAddress!, ign);
       }
       const resolvedIgn = existingIgn || ign;
       setIsRegistered(true);

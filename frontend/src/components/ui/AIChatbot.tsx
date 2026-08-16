@@ -8,7 +8,7 @@ export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user', content: string | React.ReactNode }[]>([
-    { role: 'ai', content: 'NOVA Command Center online. Soroban link stable. I am scanning 100% of the registry. What scouting intel do you need?' }
+    { role: 'ai', content: 'NOVA Command Center online. Avalanche link stable. I am scanning 100% of the registry. What scouting intel do you need?' }
   ]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
