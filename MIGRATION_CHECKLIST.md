@@ -46,15 +46,18 @@ Live status tracker for the Stellar → Avalanche migration. Full design rationa
 
 ---
 
-## ⛔ Not done yet — blocked on you
+## ✅ Done (cont'd — deployment)
 
-- [ ] **Fund a Fuji testnet wallet.** Faucet: https://core.app/tools/testnet-faucet (needs GitHub login or a small mainnet AVAX balance). This is the one step only you can do.
+- [x] Funded a Fuji wallet (`0xB12df7d12d9c5d2B65FB878b5fF67a5f29F59A0c`, via the Builder Hub faucet)
+- [x] Deployed `ScoutGridMarket.sol` to Fuji: **`0x82e197f69c3d57595f8E26E5a807E9223F3D9111`**
+  - Tx: `0x57e179960f48f4b0e3034facadb09d02322edb1a587e5dccf77f218a26eef246`
+  - Cost: ~0.0000000005 AVAX (negligible)
+- [x] Verified source on Snowscan/Routescan — `foundry.toml`'s `[etherscan]` block now uses a hardcoded keyless placeholder so future deploys verify automatically without an API key
+- [x] Wired the deployed address into `frontend/.env` as `VITE_CONTRACT_ADDRESS`
+- [x] Rebuilt frontend against the live address — `tsc --noEmit` and `npm run build` both clean
 
-## ⏳ Not done yet — waiting on the step above
+## ⏳ Not done yet — next up
 
-- [ ] Deploy `ScoutGridMarket.sol` to Fuji: `forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify` (from `contracts/`)
-- [ ] Verify source on Snowtrace (part of the `--verify` flag above)
-- [ ] Wire the deployed address into `frontend/.env` as `VITE_CONTRACT_ADDRESS`
 - [ ] Manual browser E2E pass against the live Fuji contract (connect wallet → register → mint → bid → buyout → loan → repay)
 - [ ] Re-record demo video + re-capture screenshots (wallet picker, transaction confirmations, StellarExpert→Snowtrace explorer shot)
 - [ ] Redeploy frontend to Vercel pointing at the live contract
@@ -65,5 +68,5 @@ Live status tracker for the Stellar → Avalanche migration. Full design rationa
 
 ## 👉 Next action
 
-**You:** fund a wallet at the Fuji faucet, give me the address (or say "use the throwaway key you generated").
-**Me:** deploy, wire up the address, run the full manual E2E, then work through the "waiting on" list top to bottom.
+**You:** connect a wallet to the live site (locally via `npm run dev` in `frontend/`, or point your live Vercel deploy at the new `.env`) and run through the flow once as a sanity check.
+**Me:** ready to redeploy to Vercel, re-capture screenshots, and clean up `contract/` once you confirm the E2E pass looks good.

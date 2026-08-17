@@ -183,14 +183,14 @@ On the client side, every single interaction (Bidding, Minting, Buyouts, Registr
 
 | Layer | Environment | Address |
 | :--- | :--- | :--- |
-| **Marketplace Contract** | Avalanche Fuji (chainId `43113`) | *Pending — deployment blocked on funding a Fuji wallet. Deploy with `forge script script/Deploy.s.sol --rpc-url fuji --broadcast --verify` from `contracts/`.* |
-| **Admin Account** | Avalanche Fuji | *Set to the deploying wallet unless `ADMIN_ADDRESS` is overridden.* |
+| **Marketplace Contract** | Avalanche Fuji (chainId `43113`) | [`0x82e197f69c3d57595f8E26E5a807E9223F3D9111`](https://testnet.snowscan.xyz/address/0x82e197f69c3d57595f8e26e5a807e9223f3d9111) |
+| **Admin Account** | Avalanche Fuji | `0xB12df7d12d9c5d2B65FB878b5fF67a5f29F59A0c` (the deploying wallet) |
 | **Native Asset** | AVAX (native — no token contract) | n/a |
 
-**Already validated:** every function below was run end-to-end against a local Foundry Anvil devnet during the port — see [`AVALANCHE_MIGRATION_PLAN.md`](./AVALANCHE_MIGRATION_PLAN.md) for the full dry-run walkthrough (register → mint → bid → accept → fund pool → take loan → repay with overpayment refund → liquidate after expiry), with every balance matching hand-calculated numbers to the wei.
+**Already validated:** every function above was run end-to-end against a local Foundry Anvil devnet during the port — see [`AVALANCHE_MIGRATION_PLAN.md`](./AVALANCHE_MIGRATION_PLAN.md) for the full dry-run walkthrough (register → mint → bid → accept → fund pool → take loan → repay with overpayment refund → liquidate after expiry), with every balance matching hand-calculated numbers to the wei. The live Fuji deployment above repeats the same script — deploy cost was ~0.0000000005 AVAX.
 
 ### 🌐 On-Chain Explorer Verification
-Once deployed, all contract logic, scout identities, and roster transfers will be publicly verifiable on Snowtrace (Fuji's block explorer), with the source verified via `forge script ... --verify`.
+All contract logic, scout identities, and roster transfers are publicly verifiable on [Snowscan](https://testnet.snowscan.xyz/address/0x82e197f69c3d57595f8e26e5a807e9223f3d9111) (Fuji's block explorer), source-verified via `forge verify-contract` against Routescan's Etherscan-compatible API.
 
 ---
 
